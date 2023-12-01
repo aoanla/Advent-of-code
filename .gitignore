@@ -1,2 +1,4 @@
 **/input
 **/input2
+**/target/
+**/Cargo.lock
