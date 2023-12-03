@@ -1,3 +1,9 @@
+/*
+    Advent of Code 2023 Day 2 Part 2 Solution in Rust
+    Not intended to be efficient - I just wanted to write a different method to the Julia code and max-per-colour seemed like a way to do that.
+    I think I probably still do a bit too much function chaining in my hacky Rust solutions!
+*/
+
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
