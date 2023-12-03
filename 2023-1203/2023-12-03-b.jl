@@ -38,11 +38,8 @@ open("input") do f
 
         for k in keys(old_symbols)
             append!(old_symbols[k],check_symbols(k, potentials)) #check the symbols from the above line against candidates on this line
-        end
-
-        for (k,v) in pairs(old_symbols)  #"gears" are symbols with two values [this could be a filter but I don't think it matters]
-            if length(v) == 2
-                gearvals += v[1]*v[2]
+            if length(old_symbols[k]) == 2 #"gears" are symbols with two values [this could be a filter but I don't think it matters]
+                gearvals += old_symbols[k][1]*old_symbols[k][2]
             end
         end
 
