@@ -31,35 +31,24 @@ open("input") do f
     prev_matches = []
     for line in eachline(f) 
         
-        currmatches = ex_cap.(eachmatch(r"[^.0-9]([0-9]+)", line)) ∪ ex_cap.(eachmatch(r"([0-9]+)[^.0-9]", line))
-        potentials = collect(eachmatch(r"(?:[.]|^)([0-9]+)(?=[.]|$)", line))  #the numbers in this line which don't start/end with a symbol on the same line
+        potentials = collect(eachmatch(r"([0-9]+)", line))  #the numbers in this line 
+        symbols = ex_off.(eachmatch(r"[^.0-9]", line)) #the locations of the symbols on this line
 
-        accept = filter(p -> check_line(p, old_symbols), potentials)
-                   
-        union!(currmatches, ex_cap.(accept) )
+        accept = filter(p -> check_line(p, sort(old_symbols ∪ symbols) ), potentials) ##current line, old+current symbols                   
+        currmatches = ex_cap.(accept) 
         setdiff!(potentials, accept)
             
-        symbols = ex_off.(eachmatch(r"[^.0-9]", line)) #the locations of the symbols on this line
-        accept = filter(p -> check_line(p, symbols), old_potentials)
+        accept = filter(p -> check_line(p, symbols), old_potentials) ##prev line, current symbols
+        append!(prev_matches, ex_cap.(accept) )
 
-        union!(prev_matches, ex_cap.(accept) )
-
-        
-
-        linevals += sum(parse.(UInt, prev_matches))
+        linevals += sum(parse.(UInt, prev_matches)) #sum "completed prev line matches"
         old_potentials = potentials
         old_symbols = symbols
         prev_matches = currmatches
 
-        #println("$prev_matches")
-
     end
     linevals += sum(parse.(UInt, prev_matches)) #get the last line!
-    #println("$accum")
+
     println("$linevals");
 end
     
-
-
-
-#parsefile("input")
