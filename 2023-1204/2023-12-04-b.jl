@@ -3,10 +3,10 @@
 using Base.Iterators
 
 
-open("input") do f
-    linevals = 0    
+open("input") do f   
     extras = Int[]
     for (index, line) in Iterators.enumerate(eachline(f))
+        #this is overly complex given that the input is fixed format [we could just parse out by positions]
         _, wins, candidates = filter.(num -> length(num) > 0, split.(Iterators.flatten(split.(split(line, ':'), '|')), ' ' ));
 
         #this would be nicer if Julia had a built-in Queue and a pop with defaults if the list is empty
@@ -16,7 +16,6 @@ open("input") do f
 
         chain_len = length(filter(c -> in(c, wins), candidates));
         extra = extras[index];
-
         
         for i in index+1:index+chain_len
             if i > length(extras)
