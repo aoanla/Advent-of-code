@@ -78,8 +78,10 @@ function reduce_range!(v_range, lookups)
             if vr.e <= l.source_e #vr intersects with l to the left 
                 if vr.s < l.source_s # [aa[xx]bb]
                     push!(out, SeedRange(vr.s, l.source_s-1)); #left of the intersection is kept in this case
-                end # [b[xx]b] 
-                push!(out, SeedRange(vr.s+l.offset, vr.e+l.offset)) ;#the intersection is kept
+                    push!(out, SeedRange(l.dest_s, vr.e+l.offset))
+                else # [b[xx]b] 
+                    push!(out, SeedRange(vr.s+l.offset, vr.e+l.offset)) ;#the intersection is kept
+                end
                 vr.e != l.source_e && pushfirst!(lookups, Lookup(vr.e+1+l.offset, l.dest_e, vr.e+1, l.source_e, l.offset)) ;#the remainder of l is pushed back
                 break; #because vr is consumed entirely and we need to repop
             end
