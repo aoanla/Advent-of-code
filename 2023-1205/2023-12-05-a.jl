@@ -85,9 +85,11 @@ function reduce_range!(v_range, lookups)
             end
             if vr.s <= l.source_e #vr intersects with l to the right, including containing l entirely 
                 if vr.s < l.source_s #vr contains l
-                    push!(out, SeedRange(vr.s, l.source_s-1)); #the left of vr
-                end
-                push!(out, SeedRange(vr.s+l.offset, l.dest_e)); #the intersection  
+                    push!(out, SeedRange(vr.s, l.source_s-1)); #the left of vr 
+                    push!(out, SeedRange(l.dest_s, l.dest_e)); #the intersection
+                else
+                    push!(out, SeedRange(vr.s+l.offset, l.dest_e)); #the intersection 
+                end 
                 vr = SeedRange(l.source_e+1, vr.e) #the right
             end
             #if we're here then vr >  potentially all l
