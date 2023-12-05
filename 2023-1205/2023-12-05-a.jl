@@ -16,7 +16,7 @@ end
 (seeds, map_vec) =open("input") do f   
         f_iter = Iterators.Stateful(eachline(f));
 
-        seeds = parse.(Int64, split(popfirst!(f_iter)[8:end], ' '))
+        seeds = sort(parse.(Int64, split(popfirst!(f_iter)[8:end], ' ')))
         popfirst!(f_iter); #whitespace
 
         #map_dict = Dict{String, Vector{Lookup}}();
@@ -31,7 +31,7 @@ end
                 (dest,source,len) = parse.(Int64,split(line,' '));
                 push!(v, Lookup(dest,dest+len-1, source,source+len-1,len, dest-source));
             end
-            push!(map_vec,v);
+            push!(map_vec,sort(v, by=x->x.source_e));
         end
     (seeds,map_vec)    
 end
@@ -41,15 +41,13 @@ end
 """
 function apply_lookup(v, aton)
     for l in aton
-        if v >= l.source_s && v <= l.source_e
-           return v+l.offset
-        end
+        v >= l.source_s && v <= l.source_e && return v+l.offset
     end
     v
 end
 
 final_locations = foldl(map_vec; init=seeds) do s,m
-    map(ss -> apply_lookup(ss,m),s)
+    sort(map(ss -> apply_lookup(ss,m),s))
 end
 
 println("$(minimum(final_locations))")
