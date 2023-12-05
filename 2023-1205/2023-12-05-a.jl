@@ -62,7 +62,7 @@ function reduce_range!(v_range, lookups)
     out = Vector{SeedRange}();
     while !isempty(v_range) 
 
-        if isempty(lookups) #we consumed all the lookups already
+        if isempty(lookups) #we consumed all the lookups already, so no vrs can possibly intersect
             append!(out,v_range) ;#so just dump the rest of our input into out and break
             break;
         end
@@ -75,10 +75,10 @@ function reduce_range!(v_range, lookups)
                 pushfirst!(lookups,l);
                 break;
             end
-            if vr.e <= l.source_e #vr intersects with l to the left    #OFFSET ERROR HERE SOMEWHERE
+            if vr.e <= l.source_e #vr intersects with l to the left 
                 if vr.s < l.source_s # [aa[xx]bb]
                     push!(out, SeedRange(vr.s, l.source_s-1)); #left of the intersection is kept in this case
-                end # [b[xx]b] *works*
+                end # [b[xx]b] 
                 push!(out, SeedRange(vr.s+l.offset, vr.e+l.offset)) ;#the intersection is kept
                 vr.e != l.source_e && pushfirst!(lookups, Lookup(vr.e+1+l.offset, l.dest_e, vr.e+1, l.source_e, l.offset)) ;#the remainder of l is pushed back
                 break; #because vr is consumed entirely and we need to repop
@@ -87,10 +87,10 @@ function reduce_range!(v_range, lookups)
                 if vr.s < l.source_s #vr contains l
                     push!(out, SeedRange(vr.s, l.source_s-1)); #the left of vr
                 end
-                push!(out, SeedRange(vr.s+l.offset, l.dest_e)); #the intersection  - *works*
-                vr = SeedRange(l.source_e+1, vr.e) #the right *works*
+                push!(out, SeedRange(vr.s+l.offset, l.dest_e)); #the intersection  
+                vr = SeedRange(l.source_e+1, vr.e) #the right
             end
-            #if we're here then vr > l
+            #if we're here then vr >  potentially all l
             isempty(lookups) && pushfirst!(v_range,vr) #push back the vr so it gets picked up in next loop in the big addition    
         end
                     
