@@ -102,11 +102,11 @@ final_locations = foldl(map_vec; init=seeds) do s,m
     sort(map(ss -> apply_lookup(ss,m),s))
 end
 
-println("$(minimum(final_locations))");
+println("$(final_locations[1])");
 
-loc_ranges = map(x->x.s,foldl(reduce_range!, map_vec; init=seed_r));
+loc_ranges = foldl(reduce_range!, map_vec; init=seed_r);
 
-println("$(minimum(loc_ranges))");
+println("$(loc_ranges[1].s)");
 
 #=
 
