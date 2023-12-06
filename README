@@ -2,7 +2,7 @@ This is a simple repo to collect my Advent Of Code submissions, starting with 20
 
 I'm probably not going to get much past Day 10, the traditional point at which it gets hard and people have other things to deal with in their lives, but this is also an excuse to write more Julia and more Rust so...
 
-Evolving plan is:
+Evolving plan is, ordered by priority:
 1. Solve Part 1 and Part 2 for a day in Julia
-2. Solve Part 2 (at least) for the day in Rust
-3. If I am feeling up to it, solve Part 1 for the day in Uiua [so far only for Day 4]
+2. Solve at least one Part for the day in Rust - playing with parsers here (nom for Day5,6;probably winnow for Day7)
+3. If I am feeling up to it, solve at least one Part for the day in Uiua (Day 1(both), Day4(1), Day6(both))
