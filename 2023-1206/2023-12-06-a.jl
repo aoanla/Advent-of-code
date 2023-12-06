@@ -20,7 +20,7 @@ open("input") do f
     l2=first_parse(f);
     Ts=listnums(l1);
     Ds=listnums(l2);
-    linevals = reduce(*, map(solve,zip(Ts,Ds))) ;
+    linevals = reduce(*, solve.(zip(Ts,Ds))) ;
 
     println("Part one: $linevals");
     @printf "Part two: %f" solve([onenum(l1),onenum(l2)])
