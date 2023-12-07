@@ -5,77 +5,85 @@
 
 
 use std::fs;
-use nom::{
-    character::complete::{digit1, space1},
-    bytes::complete::tag,
-    combinator::map_res,
-    sequence::{pair, preceded},
-    multi::separated_list1,
-    IResult,
+use winnow::{
+    prelude::*,
+    ascii::{alphanumeric1, digit1, line_ending, space1},
+    combinator::{separated_pair,separated},
 };
-use std::str::FromStr;
-use std::collections:HashMap;
+use std::collections::HashMap;
 
-pub fn parse_num(input: &str) -> IResult<&str, i64> {
-    map_res(digit1, i64::from_str)(input)
-}
 
-let cardtoval = HashMap::<char,u32>::from( ('2',1), ('3',2), ('4',3), ('5',4), ('6',5), ('7',6), ('8',7), ('9',8), ('T',9), ('J',10), ('Q',11), ('K',12), ('A',13));
 
-let cardtovaltwo = HashMap::<char,u32>::from( ('J',1), ('2',2), ('3',3), ('4',4), ('5',5), ('6',6), ('7',7), ('8',8), ('9',9), ('T',10), ('Q',11), ('K',12), ('A',13));
 
 //reduce into separate hex values per card, leftmost value largest
-fn handconcat(x: Vec<u32>) {
-    x.fold(0u32, |acc, card| (acc << 4) + card )
+fn handconcat(x: Vec<u32>) -> u64 {
+    let tmp = x.iter().fold(0u32, |acc, card| (acc << 4) + card ) as u64;
+    println!("{tmp}");
+    tmp
 }
 
 //u128 here
-fn init_hex(valmap)
-    HashMap::<char, u128>::from( valmap.iter().map(|(k,v)| (k,1<<((v-1)<<8))).collect::<Vec<_>>) 
+fn init_hex(valmap: &HashMap<char,u32>) -> HashMap<char, u128> {
+    let mut hexmap = HashMap::new();
+    for (k,v) in valmap.iter() {
+        hexmap.insert(*k, 1u128 <<((v-1) * 8));
+    } 
+    hexmap
+    //HashMap::<char, u128>::from( valmap.iter().map(|(k,v)| (*k,1<<((v-1)<<8) as u128)).collect::<Vec<(char, u128)>>().iter()) 
 }
 
-let cardtohex = init_hex(cardtoval);
-let cardtovaltwo = init_hex(cardtovaltwo);
 
 
+#[derive(Debug)]
 pub struct Hand {
     value:u64,
-    bid:i32 ,
-};
+    bid:i64 ,
+}
 
 //handbits are result of compact_h - a u128   
 fn classify(handbits:u128) -> u64 {
-    handbits.TOARRAYOFBYTES().map(|x| 1 << (x << 1)).sum()
+    handbits.to_le_bytes().iter().map(|x| 1 << (x << 1)).sum()
 }
 
-fn compact_h(hand_str: &str) -> u128 {
-    handstr.bytes().map(|x| cardtohex[x]).sum()
+fn compact_h(hand_str: &str, cth: &HashMap<char, u128>) -> u128 {
+    hand_str.chars().map(|x| cth[&x]).sum()
 }
 //compact_htwo(hand_str) = sum(map(x->cardtohextwo[x], collect(hand_str)));
 
-fn handcmp(hone:u64,htwo:u64) -> bool {
-    hone.value < htwo.value //the front 32 bits of value are the class of hand, the back 32 are the concatenated card values to break ties
+
+
+pub fn process_cards(asciicards: &str, ctv: &HashMap<char,u32>, cth: &HashMap<char, u128>) -> u64 {
+    let r_h = handconcat(asciicards.chars().map(|x| ctv[&x]).collect::<Vec<_>>());
+    ( classify(compact_h(asciicards, cth)) << 32 ) | r_h 
 }
 
-fn handbid(x: (usize,Hand) ) -> usize {
-    x.0*x.1.bid 
+
+pub fn parse_hands(input: &mut &str, ctv: &HashMap<char,u32>, cth: &HashMap<char, u128>) -> PResult<Vec<Hand>> {
+    let parse_num = digit1.parse_to();
+    let parse_cards = alphanumeric1.map(|x| process_cards(x, ctv, cth));
+    let parse_hand = separated_pair(parse_cards, space1, parse_num).map(|x| Hand{value: x.0, bid: x.1});
+
+    separated(1.., parse_hand, line_ending).parse_next(input)
+}
+
+fn handbid(x: (usize,&Hand) ) -> i64 {
+    x.0 as i64 *x.1.bid 
 } 
 
 fn main() {
-    let buffer = fs::read_to_string("input").unwrap(); 
+    let cardtoval: HashMap<char,u32> = HashMap::<char,u32>::from( [('2',1), ('3',2), ('4',3), ('5',4), ('6',5), ('7',6), ('8',7), ('9',8), ('T',9), ('J',10), ('Q',11), ('K',12), ('A',13) ]);
+    //let cardtovaltwo: HashMap<char,u32>= HashMap::<char,u32>::from([ ('J',1), ('2',2), ('3',3), ('4',4), ('5',5), ('6',6), ('7',7), ('8',8), ('9',9), ('T',10), ('Q',11), ('K',12), ('A',13) ]);
+    let cardtohex: HashMap<char, u128> = init_hex(&cardtoval);
+    //let cardtohextwo: HashMap<char, u128> = init_hex(cardtovaltwo);
 
-    let (buffer,time_chunks) = parse_time(&buffer).unwrap() ;
-    let (_,dist_chunks) = parse_dist(&buffer).unwrap() ;
-    
-    let ts = time_chunks.iter().map(|x| i64::from_str(*x).unwrap_or(0i64)).collect::<Vec<i64>>();
-    let ds = dist_chunks.iter().map(|x| i64::from_str(*x).unwrap_or(0i64)).collect::<Vec<i64>>();
-    
-    println!("{:?}", ts);
-    println!("{:?}", ds);
-    let partone: f64 = ts.iter().zip(ds).map(|(x,y)| solve(*x,y)).product();
-    let parttwo = solve( time_chunks.join("").parse().unwrap_or(0i64), dist_chunks.join("").parse().unwrap_or(0i64)  );
+    let buffer = fs::read_to_string("input2").unwrap(); 
+    let mut handvec  = parse_hands(&mut buffer.as_str(), &cardtoval, &cardtohex).unwrap();
+    println!("{:?}", handvec);
+    handvec.sort_by_key(|k| k.value);
+    println!("{}", handvec.len());    
+    let partone: i64 = handvec.iter().enumerate().map(|x| handbid(x)).sum();
 
-    println!("{partone} {parttwo}");
+    println!("{partone}");
 
 }
 
