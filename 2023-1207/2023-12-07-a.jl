@@ -30,13 +30,17 @@ struct Hand
     bid::Int32 
 end
 
+#####
+#####   In general, using nybbles is memory parsimonious but needs masks like this to do stuff efficiently.
+#####   The SIMD version of this needs to use bytes (and UInt128 to hold them all) and then this is simplified.
+#####
 #                  low nybble        high nybble, shift right 
 # note this also adds 1 for every zero nybble     
 hilonybble(x) = 4^(x & 0x0f)   +   4^((x & 0xf0 ) >> 4) ; 
 
     #counts = sum(hand); #we like the pidgeonhole sorting principle - a UInt64 has enough nybbles in it that we can assign one to each possible card type
     #this next bit could be SIMDified which is why chose this approach
-classify(hand) =  sum(hilonybble.(reinterpret(UInt8, [hand])));
+classify(handbits) =  sum(hilonybble.(reinterpret(UInt8, [handbits])));
 
 compact_h(hand_str) = sum(map(x->cardtohex[x], collect(hand_str)));
 compact_htwo(hand_str) = sum(map(x->cardtohextwo[x], collect(hand_str)));
@@ -78,10 +82,10 @@ jmap[ThreeK4] = FourK;  #4K from J and 3K
 jmap[FourK4] = FiveK;    #5K from J and 4K
 
 
-function classifypt2(hand)
+function classifypt2(handbits)
     #with them compacted, this is just a mask on the lower nybble
-    jcount = hand & 0x000000000000000f;
-    handnojs = hand & 0xfffffffffffffff0;
+    jcount = handbits & 0x000000000000000f;
+    handnojs = handbits & 0xfffffffffffffff0;
     if jcount == 0 #early return
         classify(handnojs)
     else
@@ -103,6 +107,8 @@ open("input") do f
         (handc,bidc) = split(line," ");
         rawhand = handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
         rawhand2 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
+        # we *should* just get hand from rawhand directly by mapping nybble -> 16^(nybble-1) but iterating over nybbles is annoying
+        # in the SIMD version of this I think we'd use bytes not nybbles and a UInt128
         hand = compact_h(handc);
         hand2 = compact_htwo(handc);
         value = classify(hand); #the hard bit
