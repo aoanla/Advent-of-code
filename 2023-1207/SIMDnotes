@@ -1,0 +1,12 @@
+The SIMD version of this [in AVX512] would do - we need to use words (u16s not even u8s!) for our card values,
+due to limits on AVX sizes supported for the operations we want, I think :(
+
+
+Classifier: 
+#generate the "values to sum" to get the classification:
+VPSLLVW ["shift words in xmm2 by corresponding elements of xmm3"]
+with xmm2 a mm256 filled with a pattern of u16s set to 0x4
+and xmm3 a mm256 packed with m16s corresponding to the "card fact counts" by position
+
+-> in Intel C intrinics, this is VPSLLVW __m256i _mm256_maskz_sllv_epi16( __mmask16 k, __m256i a, __m256i cnt);
+with the mask k set to not mask anything
