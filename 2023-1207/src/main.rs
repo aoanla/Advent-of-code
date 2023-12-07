@@ -4,6 +4,18 @@
 */
 
 
+//SIMD Notes: 
+// u128 -> u256 [SIMD]
+// init_hex -> 16 bit offsets not 8
+// classify() works as 
+// input -> SIMD vector (16 words = 256b)
+// mul all words in SIMD vector by 2 (PSLLW with count operand = 1)
+// then 
+//VPSLLVW __m256i _mm256_maskz_sllv_epi16( __mmask16 k, __m256i a, __m256i cnt); 
+// with an input vector of words = 0x1 to shift [maybe via VBROADCAST? or just a literal?]
+// and the result of the PSLLW as our count operand *vector*
+//and then reduce sum over words into u16  (several [4] PHADDW (as each one sums adjacent pairs) in sequence? )
+
 use std::fs;
 use winnow::{
     prelude::*,
