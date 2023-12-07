@@ -15,6 +15,7 @@ const cardtohextwo = Dict{Char,UInt64}('J'=>0x1, '2'=>0x10, '3'=>0x100, '4'=>0x1
 
 struct Hand
     hand::UInt64
+    rawhand::Vector{UInt64}
     value::Int16
     bid::Int32 
 end
@@ -28,7 +29,6 @@ hilonybble(x) = 4^(x & 0x0f)   +   4^((x & 0xf0 ) >> 4) ;
 classify(hand) =  sum(hilonybble.(reinterpret(UInt8, [hand])));
 
 compact_h(hand_str) = sum(map(x->cardtohex[x], collect(hand_str)));
-compact_h2(hand_str) = sum(map(x->cardtohextwo[x], collect(hand_str)));
 
 const FiveK = classify(compact_h("AAAAA"));
 const FourK = classify(compact_h("AAAAK"));
@@ -68,8 +68,6 @@ jmap[FourK4] = FiveK;    #5K from J and 4K
 
 
 function classifypt2(hand)
-    #remove js
-    #(handnojs, jcount) = splitjs(hand);
     #with them compacted, this is just a mask on the lower nybble
     jcount = hand & 0x000000000000000f;
     handnojs = hand & 0xfffffffffffffff0;
@@ -83,7 +81,7 @@ end
 
 function handcmp(hone,htwo) 
     hone.value != htwo.value && return hone.value < htwo.value ; 
-    for (one,two) in zip(hone.hand,htwo.hand)
+    for (one,two) in zip(hone.rawhand,htwo.rawhand)
         one != two && return one < two ;
     end
     false
@@ -92,18 +90,19 @@ end
 handbid(x) = x[1]*x[2].bid;
 
 open("input") do f
-    partone = 0
     hands = Vector{Hand}();
     handsp2 = Vector{Hand}();
     for line in eachline(f)
         (handc,bidc) = split(line," ");
-        hand = compact_h(handc);  #faster to compact down into bitset ASAP
-        hand2 = compact_h2(handc);
+        rawhand = map(x->cardtohex[x], collect(handc));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
+        rawhand2 = map(x->cardtohextwo[x], collect(handc));
+        hand = sum(rawhand);
+        hand2 = sum(rawhand2)'
         value = classify(hand); #the hard bit
         value2 = classifypt2(hand2); #harder!
         bid = parse(Int64,bidc);
-        push!(hands,Hand(hand,value,bid));
-        push!(handsp2, Hand(hand2, value2, bid));
+        push!(hands,Hand(hand,rawhand, value,bid));
+        push!(handsp2, Hand(hand2, rawhand2, value2, bid));
     end
     sort!(hands, lt=handcmp);
     sort!(handsp2, lt=handcmp);
