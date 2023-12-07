@@ -93,7 +93,7 @@ function classifypt2(handbits)
 end
 
 function handcmp(hone,htwo) 
-    hone.value < htwo.value #: hone.rawhand < htwo.rawhand 
+    hone.value < htwo.value # the front 32 bits of value are the class of hand, the back 32 are the concatenated card values to break ties
 end
 
 handbid(x) = x[1]*x[2].bid;
