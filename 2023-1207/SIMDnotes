@@ -10,3 +10,7 @@ and xmm3 a mm256 packed with m16s corresponding to the "card fact counts" by pos
 
 -> in Intel C intrinics, this is VPSLLVW __m256i _mm256_maskz_sllv_epi16( __mmask16 k, __m256i a, __m256i cnt);
 with the mask k set to not mask anything
+
+
+What's annoying is that 16-bit lanes ("words" in AVXese) are an AVX512 feature, even for 128 or 256bit SIMD registers, so I can't test this on my CPU here [which
+is Zen3]
