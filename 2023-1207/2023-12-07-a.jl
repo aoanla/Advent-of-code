@@ -24,8 +24,6 @@ const cardtohextwo = Dict{Char,UInt64}('J'=>0x1, '2'=>0x10, '3'=>0x100, '4'=>0x1
 
 
 struct Hand
-    #hand::UInt64
-    #rawhand::UInt32
     value::UInt64
     bid::Int32 
 end
@@ -36,7 +34,7 @@ end
 #####
 #                  low nybble        high nybble, shift right 
 # note this also adds 1 for every zero nybble     
-hilonybble(x) = 4^(x & 0x0f)   +   4^((x & 0xf0 ) >> 4) ; 
+hilonybble(x) = UInt64(4)^(x & 0x0f)   +   UInt64(4)^((x & 0xf0 ) >> 4) ; 
 
     #counts = sum(hand); #we like the pidgeonhole sorting principle - a UInt64 has enough nybbles in it that we can assign one to each possible card type
     #this next bit could be SIMDified which is why chose this approach
@@ -67,7 +65,7 @@ const TwoPair4 = classify(compact_h("AAKK"));
 const Empty = classify(compact_h(""));
 
 
-jmap = zeros(UInt16,FiveK);  #thankfully no collisions
+jmap = zeros(UInt64,FiveK);  #thankfully no collisions
 jmap[Empty] = FiveK; #5K from 5Js
 jmap[High1]  = FiveK;     #5K from 4Js
 jmap[High2] = FourK; #4K from 3Js and uniques
@@ -95,7 +93,7 @@ function classifypt2(handbits)
 end
 
 function handcmp(hone,htwo) 
-    htwo.value < hone.value #< htwo.value : hone.rawhand < htwo.rawhand 
+    hone.value < htwo.value #: hone.rawhand < htwo.rawhand 
 end
 
 handbid(x) = x[1]*x[2].bid;
@@ -105,20 +103,21 @@ open("input") do f
     handsp2 = Vector{Hand}();
     for line in eachline(f)
         (handc,bidc) = split(line," ");
-        rawhand::UInt32= handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
-        rawhand2::UInt32 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
+        rawhand = handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
+        rawhand2 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
         # we *should* just get hand from rawhand directly by mapping nybble -> 16^(nybble-1) but iterating over nybbles is annoying
         # in the SIMD version of this I think we'd use bytes not nybbles and a UInt128
         hand = compact_h(handc);
         hand2 = compact_htwo(handc);
-        value::UInt64= (classify(hand) << 32) | rawhand ; #the hard bit
-        value2::UInt64= (classifypt2(hand2) << 32) | rawhand2  ; #harder!
+        value::UInt64= (classify(hand)<< 32 ) | rawhand ; #the hard bit
+        value2::UInt64= (classifypt2(hand2) << 32 ) | rawhand2  ; #harder!
         bid = parse(Int64,bidc);
-        push!(hands,Hand(value, bid));
+        push!(hands,Hand(value,  bid));
         push!(handsp2, Hand(value2, bid));
     end
     sort!(hands, lt=handcmp);
     sort!(handsp2, lt=handcmp);
+    println("$(handsp2[end])");
     partone = sum(handbid.(enumerate(hands)));
     parttwo = sum(handbid.(enumerate(handsp2)));
     println("Part one: $partone");
