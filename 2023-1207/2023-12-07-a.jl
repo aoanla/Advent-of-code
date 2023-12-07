@@ -1,6 +1,16 @@
 
 #part 1 &2
 
+const cardtoval = Dict{Char,UInt32}('2'=>1, '3'=>2, '4'=>3, '5'=>4, '6'=>5, '7'=>6, '8'=>7, '9'=>8, 'T'=>9, 'J'=>10, 'Q'=>11, 'K'=>12, 'A'=>13);
+
+const cardtovaltwo = Dict{Char,UInt32}('J'=>1, '2'=>2, '3'=>3, '4'=>4, '5'=>5, '6'=>6, '7'=>7, '8'=>8, '9'=>9, 'T'=>10, 'Q'=>11, 'K'=>12, 'A'=>13);
+
+#reduce into separate hex values per card, leftmost value largest
+handconcat(x) = foldl(x) do acc, card
+    (acc << 4) + card
+end
+
+
 #map to nybbles so we can pidgeonhole principle the classifer
 const cardtohex = Dict{Char,UInt64}('2'=>0x1, '3'=>0x10, '4'=>0x100, '5'=>0x1000, '6'=>0x10000,
                      '7'=>0x100000, '8'=>0x1000000, '9'=>0x10000000, 'T'=>0x100000000, 'J'=>0x1000000000,
@@ -15,7 +25,7 @@ const cardtohextwo = Dict{Char,UInt64}('J'=>0x1, '2'=>0x10, '3'=>0x100, '4'=>0x1
 
 struct Hand
     hand::UInt64
-    rawhand::Vector{UInt64}
+    rawhand::UInt32
     value::Int16
     bid::Int32 
 end
@@ -29,6 +39,7 @@ hilonybble(x) = 4^(x & 0x0f)   +   4^((x & 0xf0 ) >> 4) ;
 classify(hand) =  sum(hilonybble.(reinterpret(UInt8, [hand])));
 
 compact_h(hand_str) = sum(map(x->cardtohex[x], collect(hand_str)));
+compact_htwo(hand_str) = sum(map(x->cardtohextwo[x], collect(hand_str)));
 
 const FiveK = classify(compact_h("AAAAA"));
 const FourK = classify(compact_h("AAAAK"));
@@ -80,11 +91,7 @@ function classifypt2(hand)
 end
 
 function handcmp(hone,htwo) 
-    hone.value != htwo.value && return hone.value < htwo.value ; 
-    for (one,two) in zip(hone.rawhand,htwo.rawhand)
-        one != two && return one < two ;
-    end
-    false
+    hone.value != htwo.value ? hone.value < htwo.value : hone.rawhand < htwo.rawhand 
 end
 
 handbid(x) = x[1]*x[2].bid;
@@ -94,10 +101,10 @@ open("input") do f
     handsp2 = Vector{Hand}();
     for line in eachline(f)
         (handc,bidc) = split(line," ");
-        rawhand = map(x->cardtohex[x], collect(handc));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
-        rawhand2 = map(x->cardtohextwo[x], collect(handc));
-        hand = sum(rawhand);
-        hand2 = sum(rawhand2)'
+        rawhand = handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
+        rawhand2 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
+        hand = compact_h(handc);
+        hand2 = compact_htwo(handc);
         value = classify(hand); #the hard bit
         value2 = classifypt2(hand2); #harder!
         bid = parse(Int64,bidc);
@@ -106,8 +113,8 @@ open("input") do f
     end
     sort!(hands, lt=handcmp);
     sort!(handsp2, lt=handcmp);
-    partone = foldl(+,handbid.(enumerate(hands)));
-    parttwo = foldl(+,handbid.(enumerate(handsp2)));
+    partone = sum(handbid.(enumerate(hands)));
+    parttwo = sum(handbid.(enumerate(handsp2)));
     println("Part one: $partone");
     println("Part two: $parttwo");
 
