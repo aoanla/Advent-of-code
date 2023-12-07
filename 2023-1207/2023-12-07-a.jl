@@ -24,9 +24,9 @@ const cardtohextwo = Dict{Char,UInt64}('J'=>0x1, '2'=>0x10, '3'=>0x100, '4'=>0x1
 
 
 struct Hand
-    hand::UInt64
-    rawhand::UInt32
-    value::Int16
+    #hand::UInt64
+    #rawhand::UInt32
+    value::UInt64
     bid::Int32 
 end
 
@@ -95,7 +95,7 @@ function classifypt2(handbits)
 end
 
 function handcmp(hone,htwo) 
-    hone.value != htwo.value ? hone.value < htwo.value : hone.rawhand < htwo.rawhand 
+    htwo.value < hone.value #< htwo.value : hone.rawhand < htwo.rawhand 
 end
 
 handbid(x) = x[1]*x[2].bid;
@@ -105,17 +105,17 @@ open("input") do f
     handsp2 = Vector{Hand}();
     for line in eachline(f)
         (handc,bidc) = split(line," ");
-        rawhand = handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
-        rawhand2 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
+        rawhand::UInt32= handconcat(map(x->cardtoval[x], collect(handc)));  #faster to compact down into bitset ASAP, but we need the ordered list for tie breaks!
+        rawhand2::UInt32 = handconcat(map(x->cardtovaltwo[x], collect(handc)));
         # we *should* just get hand from rawhand directly by mapping nybble -> 16^(nybble-1) but iterating over nybbles is annoying
         # in the SIMD version of this I think we'd use bytes not nybbles and a UInt128
         hand = compact_h(handc);
         hand2 = compact_htwo(handc);
-        value = classify(hand); #the hard bit
-        value2 = classifypt2(hand2); #harder!
+        value::UInt64= (classify(hand) << 32) | rawhand ; #the hard bit
+        value2::UInt64= (classifypt2(hand2) << 32) | rawhand2  ; #harder!
         bid = parse(Int64,bidc);
-        push!(hands,Hand(hand,rawhand, value,bid));
-        push!(handsp2, Hand(hand2, rawhand2, value2, bid));
+        push!(hands,Hand(value, bid));
+        push!(handsp2, Hand(value2, bid));
     end
     sort!(hands, lt=handcmp);
     sort!(handsp2, lt=handcmp);
