@@ -15,21 +15,19 @@ use std::collections::HashMap;
 
 
 
-//reduce into separate hex values per card, leftmost value largest
+//reduce into separate hex values per card, leftmost value largest  *WORKS*
 fn handconcat(x: Vec<u32>) -> u64 {
     let tmp = x.iter().fold(0u32, |acc, card| (acc << 4) + card ) as u64;
-    println!("{tmp}");
     tmp
 }
 
-//u128 here
+//u128 here *WORKS*
 fn init_hex(valmap: &HashMap<char,u32>) -> HashMap<char, u128> {
     let mut hexmap = HashMap::new();
     for (k,v) in valmap.iter() {
         hexmap.insert(*k, 1u128 <<((v-1) * 8));
     } 
     hexmap
-    //HashMap::<char, u128>::from( valmap.iter().map(|(k,v)| (*k,1<<((v-1)<<8) as u128)).collect::<Vec<(char, u128)>>().iter()) 
 }
 
 
@@ -45,6 +43,7 @@ fn classify(handbits:u128) -> u64 {
     handbits.to_le_bytes().iter().map(|x| 1 << (x << 1)).sum()
 }
 
+// works correctly
 fn compact_h(hand_str: &str, cth: &HashMap<char, u128>) -> u128 {
     hand_str.chars().map(|x| cth[&x]).sum()
 }
@@ -67,7 +66,7 @@ pub fn parse_hands(input: &mut &str, ctv: &HashMap<char,u32>, cth: &HashMap<char
 }
 
 fn handbid(x: (usize,&Hand) ) -> i64 {
-    x.0 as i64 *x.1.bid 
+    (x.0 + 1) as i64 *x.1.bid 
 } 
 
 fn main() {
@@ -76,11 +75,9 @@ fn main() {
     let cardtohex: HashMap<char, u128> = init_hex(&cardtoval);
     //let cardtohextwo: HashMap<char, u128> = init_hex(cardtovaltwo);
 
-    let buffer = fs::read_to_string("input2").unwrap(); 
+    let buffer = fs::read_to_string("input").unwrap(); 
     let mut handvec  = parse_hands(&mut buffer.as_str(), &cardtoval, &cardtohex).unwrap();
-    println!("{:?}", handvec);
-    handvec.sort_by_key(|k| k.value);
-    println!("{}", handvec.len());    
+    handvec.sort_by_key(|k| k.value);   
     let partone: i64 = handvec.iter().enumerate().map(|x| handbid(x)).sum();
 
     println!("{partone}");
