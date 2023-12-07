@@ -1,6 +1,5 @@
 
 #part 1 &2
-using Printf
 
 #map to nybbles so we can pidgeonhole principle the classifer
 const cardtohex = Dict{Char,UInt64}('2'=>0x1, '3'=>0x10, '4'=>0x100, '5'=>0x1000, '6'=>0x10000,
@@ -15,7 +14,7 @@ const cardtohextwo = Dict{Char,UInt64}('J'=>0x1, '2'=>0x10, '3'=>0x100, '4'=>0x1
 
 
 struct Hand
-    hand::Vector{UInt64}
+    hand::UInt64
     value::Int16
     bid::Int32 
 end
@@ -24,32 +23,33 @@ end
 # note this also adds 1 for every zero nybble     
 hilonybble(x) = 4^(x & 0x0f)   +   4^((x & 0xf0 ) >> 4) ; 
 
-function classify(hand)
-    counts = sum(hand); #we like the pidgeonhole sorting principle - a UInt64 has enough nybbles in it that we can assign one to each possible card type
+    #counts = sum(hand); #we like the pidgeonhole sorting principle - a UInt64 has enough nybbles in it that we can assign one to each possible card type
     #this next bit could be SIMDified which is why chose this approach
-    sum(hilonybble.(reinterpret(UInt8, [counts])))
-end
+classify(hand) =  sum(hilonybble.(reinterpret(UInt8, [hand])));
 
-const FiveK = classify(map(x->cardtohex[x], collect("AAAAA")));
-const FourK = classify(map(x->cardtohex[x], collect("AAAAK")));
-const ThreeK = classify(map(x->cardtohex[x], collect("AAAKQ")));
-const FH = classify(map(x->cardtohex[x], collect("AAAKK")));
-const Pair = classify(map(x->cardtohex[x], collect("AAKQJ")));
-const TwoPair = classify(map(x->cardtohex[x], collect("AAKKJ")));
-const High = classify(map(x->cardtohex[x], collect("AKQJT")));
+compact_h(hand_str) = sum(map(x->cardtohex[x], collect(hand_str)));
+compact_h2(hand_str) = sum(map(x->cardtohextwo[x], collect(hand_str)));
+
+const FiveK = classify(compact_h("AAAAA"));
+const FourK = classify(compact_h("AAAAK"));
+const ThreeK = classify(compact_h("AAAKQ"));
+const FH = classify(compact_h("AAAKK"));
+const Pair = classify(compact_h("AAKQJ"));
+const TwoPair = classify(compact_h("AAKKJ"));
+const High = classify(compact_h("AKQJT"));
 #lookup jmap values below
-const High1 = classify(map(x->cardtohex[x], collect("A")));
-const High2 = classify(map(x->cardtohex[x], collect("AK")));
-const High3 = classify(map(x->cardtohex[x], collect("AKQ")));
-const High4 = classify(map(x->cardtohex[x], collect("AKQJ")));
-const FourK4 = classify(map(x->cardtohex[x], collect("AAAA")));
-const ThreeK4 = classify(map(x->cardtohex[x], collect("AAAK")));
-const ThreeK3 = classify(map(x->cardtohex[x], collect("AAA")));
-const Pair4 = classify(map(x->cardtohex[x], collect("AAKQ")));
-const Pair3 = classify(map(x->cardtohex[x], collect("AAK")));
-const Pair2 = classify(map(x->cardtohex[x], collect("AA")));
-const TwoPair4 = classify(map(x->cardtohex[x], collect("AAKK")));
-const Empty = classify(map(x->cardtohex[x], collect("")));
+const High1 = classify(compact_h("A"));
+const High2 = classify(compact_h("AK"));
+const High3 = classify(compact_h("AKQ"));
+const High4 = classify(compact_h("AKQJ"));
+const FourK4 = classify(compact_h("AAAA"));
+const ThreeK4 = classify(compact_h("AAAK"));
+const ThreeK3 = classify(compact_h("AAA"));
+const Pair4 = classify(compact_h("AAKQ"));
+const Pair3 = classify(compact_h("AAK"));
+const Pair2 = classify(compact_h("AA"));
+const TwoPair4 = classify(compact_h("AAKK"));
+const Empty = classify(compact_h(""));
 
 
 jmap = zeros(UInt16,FiveK);  #thankfully no collisions
@@ -67,14 +67,12 @@ jmap[ThreeK4] = FourK;  #4K from J and 3K
 jmap[FourK4] = FiveK;    #5K from J and 4K
 
 
-function splitjs(hand)
-    hnojs = filter(iseven, hand); #because j = 1 and all other values must be even
-    (hnojs, 5-length(hnojs))  #max length is 5 so js = 5-notjs
-end
-
 function classifypt2(hand)
     #remove js
-    (handnojs, jcount) = splitjs(hand);
+    #(handnojs, jcount) = splitjs(hand);
+    #with them compacted, this is just a mask on the lower nybble
+    jcount = hand & 0x000000000000000f;
+    handnojs = hand & 0xfffffffffffffff0;
     if jcount == 0 #early return
         classify(handnojs)
     else
@@ -99,8 +97,8 @@ open("input") do f
     handsp2 = Vector{Hand}();
     for line in eachline(f)
         (handc,bidc) = split(line," ");
-        hand = map(x->cardtohex[x], collect(handc));
-        hand2 = map(x->cardtohextwo[x], collect(handc));
+        hand = compact_h(handc);  #faster to compact down into bitset ASAP
+        hand2 = compact_h2(handc);
         value = classify(hand); #the hard bit
         value2 = classifypt2(hand2); #harder!
         bid = parse(Int64,bidc);
