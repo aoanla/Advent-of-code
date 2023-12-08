@@ -92,9 +92,12 @@ function classifypt2(handbits)
     end
 end
 
-function handcmp(hone,htwo) 
-    hone.value < htwo.value # the front 32 bits of value are the class of hand, the back 32 are the concatenated card values to break ties
+import Base.isless
+
+function isless(hone::Hand, htwo::Hand)
+    isless(hone.value, htwo.value) # the front 32 bits of value are the class of hand, the back 32 are the concatenated card values to break ties
 end
+
 
 handbid(x) = x[1]*x[2].bid;
 
@@ -115,9 +118,8 @@ open("input") do f
         push!(hands,Hand(value,  bid));
         push!(handsp2, Hand(value2, bid));
     end
-    sort!(hands, lt=handcmp);
-    sort!(handsp2, lt=handcmp);
-    println("$(handsp2[end])");
+    sort!(hands);
+    sort!(handsp2);
     partone = sum(handbid.(enumerate(hands)));
     parttwo = sum(handbid.(enumerate(handsp2)));
     println("Part one: $partone");
