@@ -20,15 +20,18 @@ readfile(file) = open(file) do f
     (directions, treedict, starts)
 end
 
+notfoundZ(x) = x[3]!='Z'
+foundA(x) = x[3]=='A'
 
 function solve(file) 
     (d,t,cursors) = readfile(file);
-
+    println("$cursors");
+    exit();
     #brute force approach
     #the clever approach would be to find cycles & sub-paths for each of the **As and then find the LCM of the prime factors?
     for (i,n) in enumerate(Iterators.cycle(d))
         cursors .= (x->t[x][n+1]).(cursors);
-        reduce(|, (x->x[3]!='Z').(cursors) ; init=false) && continue ;
+        reduce(|, notfoundZ.(cursors) ; init=false) && continue ;
         println("Found **Z after $i steps!");
         break;
     end
