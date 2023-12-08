@@ -1,6 +1,6 @@
 /*
-    Advent of Code 2023 Day7 Part 1 & 2 Solution in Rust
-    Playing with winnow, might make this SIMD
+    Advent of Code 2023 Day8 Part 1 Solution in Rust
+    Playing with winnow, which I am sorry but just causes me more compiler fighting than nom ever did!
 */
 
 
@@ -57,7 +57,6 @@ pub fn parse_file(input: &mut &str) -> (Vec<usize>, Vec<usize>, Vec<usize>, Vec<
 
 
 fn main() {
-
 
     let buffer = fs::read_to_string("input").unwrap(); 
     let (directions, startnums, endnums, nodes)  = parse_file(&mut buffer.as_str());
