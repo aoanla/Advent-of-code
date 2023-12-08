@@ -46,7 +46,7 @@ pub fn parse_file(input: &mut &str) -> PResult<(Vec<usize>, Vec<usize>, Vec<usiz
     let parse_node_to_numa = alphanumeric1.map(|x| nodenums[x]);
     let parse_node_to_numb = alphanumeric1.map(|x| nodenums[x]);
     let parse_node_to_numc = alphanumeric1.map(|x| nodenums[x]);
-    let parse_node = separated_pair(parse_node_to_numa, " = ", delimited('(', separated_pair(parse_node_to_numa, ", ", parse_node_to_numa) ,')') );
+    let parse_node = separated_pair(parse_node_to_numa, " = ", delimited('(', separated_pair(parse_node_to_numb, ", ", parse_node_to_numc) ,')') );
     let parsed_nodes :Vec<(usize, (usize,usize))>= separated(1.., parse_node, line_ending).parse_next(input)?;
     parsed_nodes.iter().for_each(|(id,lr)| nodes[*id] = [lr.0,lr.1] );
     
