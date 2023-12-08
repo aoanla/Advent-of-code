@@ -32,9 +32,9 @@ pub fn parse_file(input: &mut &str) -> PResult<(Vec<usize>, Vec<usize>, Vec<usiz
     nodes.resize(nodenames.len(), [0,0]);
 
 
-    for (i,n) in nodenames.iter().enumerate() {
+    for (i,&n) in nodenames.iter().enumerate() {
         nodenums.insert(n,i);
-        match *n {
+        match n {
             "AAA" => startnums.push(i), //n[2] == 'A' for part 2
             "ZZZ" => endnums.push(i), //n[2] == 'Z' for part 2
             _ => continue, 
