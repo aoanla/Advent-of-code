@@ -27,15 +27,13 @@ foundZ(x) = x[3]=='Z'
 function solve(file) 
     (d,t,cursors) = readfile(file);
     println("$cursors");
-    #exit();
-    #brute force approach
     #the clever approach would be to find cycles & sub-paths for each of the **As and then find the LCM?
     starts = deepcopy(cursors);
     counter = (x->false).(cursors);
     cycles = Vector{Int}();
     for (i,n) in enumerate(Iterators.cycle(d))
         cursors .= (x->t[x][n+1]).(cursors);
-        looper = filter(x->foundZ(x[2]), collect(enumerate(cursors)));
+        looper = filter(x->foundZ(x[2]), collect(enumerate(cursors))); #this only works because every Z loops back to the start of its cycle immediately
         if length(looper) > 0
             for (idx,c) in looper
                 counter[idx] |= true;
@@ -48,7 +46,7 @@ function solve(file)
         #println("Found **Z after $i steps!");
         break;
     end
-    #I don't think this *should* work, because we have no guarantee that the paths loop after finding a Z, but...
+    #A more bulletproof algorithm that worked on *any* data would need to find the actual cycles in the data [and where in each cycle we met Zs]
     println("$(reduce(lcm, cycles))");
 end
 
