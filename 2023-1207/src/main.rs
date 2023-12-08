@@ -5,6 +5,7 @@
 
 
 use std::fs;
+use std::cmp::Ordering;
 use winnow::{
     prelude::*,
     ascii::{alphanumeric1, digit1, line_ending, space1},
@@ -32,11 +33,32 @@ fn init_hex(valmap: &HashMap<char,u32>) -> HashMap<char, u128> {
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Eq)]
 pub struct Hand {
     value:u64,
     bid:i64 ,
 }
+
+impl Ord for Hand {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+impl PartialOrd for Hand {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+
+}
+
+impl PartialEq for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+
+}
+
 
 //handbits are result of compact_h - a u128   
 fn classify(handbits:u128) -> u64 {
@@ -77,7 +99,7 @@ fn main() {
 
     let buffer = fs::read_to_string("input").unwrap(); 
     let mut handvec  = parse_hands(&mut buffer.as_str(), &cardtoval, &cardtohex).unwrap();
-    handvec.sort_by_key(|k| k.value);   
+    handvec.sort();   
     let partone: i64 = handvec.iter().enumerate().map(|x| handbid(x)).sum();
 
     println!("{partone}");
