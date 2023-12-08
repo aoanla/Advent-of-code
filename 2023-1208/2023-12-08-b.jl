@@ -22,19 +22,34 @@ end
 
 notfoundZ(x) = x[3]!='Z'
 foundA(x) = x[3]=='A'
+foundZ(x) = x[3]=='Z'
 
 function solve(file) 
     (d,t,cursors) = readfile(file);
     println("$cursors");
-    exit();
+    #exit();
     #brute force approach
-    #the clever approach would be to find cycles & sub-paths for each of the **As and then find the LCM of the prime factors?
+    #the clever approach would be to find cycles & sub-paths for each of the **As and then find the LCM?
+    starts = deepcopy(cursors);
+    counter = (x->false).(cursors);
+    cycles = Vector{Int}();
     for (i,n) in enumerate(Iterators.cycle(d))
         cursors .= (x->t[x][n+1]).(cursors);
-        reduce(|, notfoundZ.(cursors) ; init=false) && continue ;
-        println("Found **Z after $i steps!");
+        looper = filter(x->foundZ(x[2]), collect(enumerate(cursors)));
+        if length(looper) > 0
+            for (idx,c) in looper
+                counter[idx] |= true;
+                println("After $i steps, $(starts[idx]) maps to $c");
+                push!(cycles, i);
+            end
+        end
+        reduce(&, counter) || continue; 
+        #reduce(|, notfoundZ.(cursors) ; init=false) && continue ;
+        #println("Found **Z after $i steps!");
         break;
     end
+    #I don't think this *should* work, because we have no guarantee that the paths loop after finding a Z, but...
+    println("$(reduce(lcm, cycles))");
 end
 
 solve("input")
