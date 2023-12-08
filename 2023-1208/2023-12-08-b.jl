@@ -23,6 +23,9 @@ end
 
 function solve(file) 
     (d,t,cursors) = readfile(file);
+
+    #brute force approach
+    #the clever approach would be to find cycles & sub-paths for each of the **As and then find the LCM of the prime factors?
     for (i,n) in enumerate(Iterators.cycle(d))
         cursors .= (x->t[x][n+1]).(cursors);
         reduce(|, (x->x[3]!='Z').(cursors) ; init=false) && continue ;
