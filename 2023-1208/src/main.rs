@@ -15,37 +15,56 @@ use winnow::{
 use std::collections::HashMap;
 
 
-pub fn 
 
 //lets parse efficiently into a Vec in two passes
-pub fn parse_hands(input: &mut &str) -> (Vec<u8>, Vec<usize>, Vec<usize>, Vec<(usize,usize)>) {
+pub fn parse_file(input: &mut &str) -> (Vec<u8>, Vec<usize>, Vec<usize>, Vec<(usize,usize)>) {
     let nodenums :HashMap<&str, usize> = HashMap::<&str,usize>::new();
     let startnums :Vec<usize> = vec![]; //the "A" nodes
     let endnums :Vec<usize> = vec![]; //the "Z" nodes
 
     let parse_direction = one_of(['L','R']).map(|x| if x=='R' {1} else {0} );
     let parse_directions = terminated(repeat(0..,parse_direction), line_ending);
-    let parse_nodename = alphanumeric1; //and discard line
+    let parse_nodename = terminated(alphanumeric1, take_while(0..,not_line_ending)); //and discard line
+    let parse_nodenames = separated(1.., parse_nodename, line_ending);
+
+
+    let nodes = Vec<(usize,usize)>::new().resize(nodenames.length(), (0,0));
+    for (i,n) in nodenames.iter().enumerate() {
+        nodenums[n] = i;
+        match n {
+            "AAA" => startnums.push(i), //n[2] == 'A' for part 2
+            "ZZZ" => endnums.push(i), //n[2] == 'Z' for part 2
+            _ => continue, 
+        }
+    }
 
 
     let parse_node_to_num = alphanumeric1.map(|x| nodenums[x]);
     let parse_node = separated_pair(parse_node_to_num, " = ", delimited('(', separated_pair(parse_node_to_num, ', ', parse_node_to_num) ,')');
-    let parse_nodes = separated(1.., parse_node, line_ending).parse_next(input).unwrap();
-    
+    let parsed_nodes = separated(1.., parse_node, line_ending).parse_next(input).unwrap();
+    parsed_nodes.for_each(|(id,lr)| nodes[id] = lr );
+
+    (directions, startnums, endnums, nodes) //for the first one we just need one startnum and one endnum but future expansion!
     
 }
 
-fn handbid(x: (usize,&Hand) ) -> i64 {
-    (x.0 + 1) as i64 *x.1.bid 
-} 
 
 fn main() {
 
 
     let buffer = fs::read_to_string("input").unwrap(); 
-    let mut handvec  = parse_hands(&mut buffer.as_str(), &cardtoval, &cardtohex).unwrap();
+    let mut inputs  = parse_file(&mut buffer.as_str()).unwrap();
 
-    
+    //
+    let mut num = nodenums["AAA"];
+    let end = nodenums["ZZZ"];
+    for (i,n) in directions.cycle().enumerate() {
+        num = nodevec[num][n];
+        if num == end {
+            println!("Found ZZZ at {}", i+1);
+            break;
+        }
+    }
 
     println!("{partone}");
 
