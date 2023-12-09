@@ -169,7 +169,7 @@ p = solve("input")
 @printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
 =#
 
-#A note on benchmarks so far:
+#A note on benchmarks so far (at the default optimisation for the Julia shell! I would hope O3 is faster...)
 
 # parse_file2 parses the input about 9x faster than parse_file does ...
 # (on my machine, 38μs vs 378μs)
