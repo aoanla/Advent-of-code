@@ -159,11 +159,11 @@ function solve2(fname::String)
     solve!(arr)
 end
 
-#=
+
 p = solve2("input")
 
 @printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
-
+#=
 p = solve("input")
 
 @printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
