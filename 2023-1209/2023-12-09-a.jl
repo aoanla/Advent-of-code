@@ -44,13 +44,20 @@ open("input") do f
     for line in eachline(f)
         samples = append!([0], parse.(Int64,split(line)));
         l = length(samples);
-        println("$l")
         s = false;
         sgn = 1;
         next_x = samples[end];
         prev_x = samples[2];
         while !s #differentiate until we hit the constant differences
-            (s,l) = finite_diff!(samples, l);
+            #inlined function (s,l) = finite_diff!(samples, l);
+            s = true;
+            samples[1] = samples[3]-samples[2];
+            for i in 3:l
+                samples[i-1]=samples[i]-samples[i-1];
+                s &= (samples[i-1] == samples[i-2]);
+            end
+            l -= 1;
+            #end inline
             next_x += samples[l];
             prev_x = samples[2] - prev_x;
             #(samples,s) = finite_diff(samples);
