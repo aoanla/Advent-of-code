@@ -101,16 +101,23 @@ function parse_file2(fname)
     col = 1;
     row = 2;
     num = 0;
+    sgn = 1;
     for i in data
+        if i == 0x2D #-sign
+            sgn = -1;
+            continue;
+        end
         if i == 0x20 #new num
-            arr[row, col] = num;
+            arr[row, col] = sgn*num;
             num = 0;
+            sgn = 1;
             row += 1;
             continue;
         end
         if i == 0xA #new col
-            arr[row, col] = num;
+            arr[row, col] = sgn*num;
             num = 0;
+            sgn = 1;
             row = 2;
             col += 1;
             continue;
@@ -125,7 +132,8 @@ function solve!(arr::Vector{Vector{Int64}})
     l = length(arr[1]); #data is rectangular, don't recheck each time
     parts = [0,0];
     for line in arr
-        extend_front_and_back!(line, l)
+        extend_front_and_back!(line, l);
+        println("$(line[1:2])");
         parts += line[1:2];
     end
     parts
@@ -136,6 +144,7 @@ function solve!(arr::Matrix{Int64})
     parts = [0,0];
     for i in axes(arr,2)
         @views extend_front_and_back!(arr[:,i], l); #need a reference not a copy, so @views
+        println("$(arr[1:2,i])");
         @views parts += arr[1:2, i];
     end
     parts
@@ -151,6 +160,14 @@ function solve2(fname::String)
     arr = parse_file2(fname); #parse, to matrix
     solve!(arr)
 end
+
+p = solve2("input")
+
+@printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
+
+p = solve("input")
+
+@printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
 
 #A note on benchmarks so far:
 
