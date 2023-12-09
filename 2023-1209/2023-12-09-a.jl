@@ -133,7 +133,7 @@ function solve!(arr::Matrix{Int64})
     parts = [0,0];
     for i in axes(arr,1)
         @views extend_front_and_back!(arr[i,:], l); #need a reference not a copy, so @views
-        parts += arr[i, 1:2];
+        @views parts += arr[i, 1:2];
     end
     parts
 end
@@ -149,6 +149,65 @@ function solve2(fname::String)
     solve!(arr)
 end
 
-#@benchmark solve(arrc) setup=(arrc=deepcopy(arr))
+#A note on benchmarks so far:
+
+# parse_file2 parses the input about 11x faster than parse_file does ...
+# (on my machine, 32μs vs 378μs)
+# ...however, the solver on the Array of Arrays (from parse_file) runs ~20% faster than the one on the Matrix (from parse_file2)
+# (on my machine 47μs vs 58μs)
+
+#so, overall "solve2" is much faster than "solve" 
+# (on my machine 90μs v 428μs )
+# but it could be ~10% faster (on my machine ~80μs) if I could get the performance in the Matrix solver
 
 #println("""$(solve("input"))""");
+
+#=
+julia> @benchmark solve!(arr) setup=(arr=parse_file2("input"))
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  56.288 μs …  1.961 ms  ┊ GC (min … max): 0.00% … 94.28%
+ Time  (median):     58.472 μs              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   59.732 μs ± 35.377 μs  ┊ GC (mean ± σ):  1.39% ±  2.28%
+
+      ▁▄▇██▆▃▁                                                 
+  ▂▂▃▅████████▇▅▄▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂▂▁▂▁▁▂▂▂▁▂▂▂▂▂▂ ▃
+  56.3 μs         Histogram: frequency by time        71.6 μs <
+
+ Memory estimate: 31.33 KiB, allocs estimate: 401.
+
+julia> @benchmark solve!(arr) setup=(arr=parse_file("input"))
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  45.436 μs … 946.283 μs  ┊ GC (min … max): 0.00% … 91.46%
+ Time  (median):     46.719 μs               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   47.287 μs ±  16.899 μs  ┊ GC (mean ± σ):  0.68% ±  1.82%
+
+     ▁▁  ▄█▆▄▁                                                  
+  ▂▂▅██▇██████▆▆▅▅▅▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▁▂▂▂▂▂▂▁▂▁▁▂▂▂ ▃
+  45.4 μs         Histogram: frequency by time         53.9 μs <
+
+ Memory estimate: 31.33 KiB, allocs estimate: 401.
+
+julia> @benchmark parse_file("input")
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  372.650 μs …  1.923 ms  ┊ GC (min … max): 0.00% … 62.66%
+ Time  (median):     378.210 μs              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   388.868 μs ± 72.960 μs  ┊ GC (mean ± σ):  1.47% ±  5.64%
+
+  ██▄▂                                                         ▂
+  ████▇▆▄▄▃▁▁▁▃▄▃▁▃▃▁▃▁▁▁▃▁▄▃▃▅██▆▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▁▅▆▆▆▆▃▁▃▅▅ █
+  373 μs        Histogram: log(frequency) by time       696 μs <
+
+ Memory estimate: 376.35 KiB, allocs estimate: 1415.
+
+julia> @benchmark parse_file2("input")
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  29.997 μs …  1.567 ms  ┊ GC (min … max): 0.00% … 93.34%
+ Time  (median):     31.770 μs              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   35.975 μs ± 35.958 μs  ┊ GC (mean ± σ):  2.84% ±  3.05%
+
+   ▃▆██▆▄▂▁                        ▁▁▂▂▃▃▃▃▃▃▂▁▁              ▂
+  ▇████████▇▇▇▇▇▇▇█▆▆▅▄▅▆▄▄▄▄▂▂▂▅▄▇███████████████▇▇▅▅▆▅▅▆▅▅▆ █
+  30 μs        Histogram: log(frequency) by time      52.9 μs <
+
+ Memory estimate: 55.85 KiB, allocs estimate: 14.
+ =#
