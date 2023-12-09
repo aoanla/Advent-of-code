@@ -32,7 +32,7 @@ open("input") do f
             (samples,s) = finite_diff(samples);
             next_x += samples[end]; #the next element of the top sample, accumulating the leading differences until constant
             prev_x = samples[begin] - prev_x; #the previous element of the top sample, reducing "forwards"
-            sgn *= -1; #our "backwards" reduce above will flip the sign on odd summations so we need to reverse that if needed
+            sgn = -sgn; #our "backwards" reduce above will flip the sign on odd summations so we need to reverse that if needed
         end
         accum += next_x;
         accum2 += sgn*prev_x; #fix sign!
