@@ -133,7 +133,6 @@ function solve!(arr::Vector{Vector{Int64}})
     parts = [0,0];
     for line in arr
         extend_front_and_back!(line, l);
-        println("$(line[1:2])");
         parts += line[1:2];
     end
     parts
@@ -144,7 +143,6 @@ function solve!(arr::Matrix{Int64})
     parts = [0,0];
     for i in axes(arr,2)
         @views extend_front_and_back!(arr[:,i], l); #need a reference not a copy, so @views
-        println("$(arr[1:2,i])");
         @views parts += arr[1:2, i];
     end
     parts
@@ -161,6 +159,7 @@ function solve2(fname::String)
     solve!(arr)
 end
 
+#=
 p = solve2("input")
 
 @printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
@@ -168,11 +167,12 @@ p = solve2("input")
 p = solve("input")
 
 @printf "Part 1: %i\nPart 2: %i\n" p[1] p[2]
+=#
 
 #A note on benchmarks so far:
 
-# parse_file2 parses the input about 11x faster than parse_file does ...
-# (on my machine, 31μs vs 378μs)
+# parse_file2 parses the input about 9x faster than parse_file does ...
+# (on my machine, 38μs vs 378μs)
 # ... and the solvers run about the same speed (solve on Matrix from parse_file2 is maybe 2-3μs faster?)
 # (on my machine 44μs vs 47μs)
 #so, overall "solve2" is much faster than "solve" 
@@ -200,18 +200,18 @@ BenchmarkTools.Trial: 10000 samples with 1 evaluation.
   43.4 μs       Histogram: log(frequency) by time      51.6 μs <
 
  Memory estimate: 15.70 KiB, allocs estimate: 201.
-julia> @benchmark parse_file2("input")
-BenchmarkTools.Trial: 10000 samples with 1 evaluation.
- Range (min … max):  29.937 μs … 814.982 μs  ┊ GC (min … max): 0.00% … 89.01%
- Time  (median):     31.379 μs               ┊ GC (median):    0.00%
- Time  (mean ± σ):   33.021 μs ±  21.586 μs  ┊ GC (mean ± σ):  1.94% ±  2.93%
 
-  ▃▆▇█▇▅▂   ▁   ▁▂                                             ▂
-  █████████▇███████▅▆▄▅▄▅▃▃▄▁▃▄▄▅▃▄▃▃▁▁▁▃▃▄▁▁▁▃▁▁▄▅▄▄▆▆▇▇██▇▇▇ █
-  29.9 μs       Histogram: log(frequency) by time      54.4 μs <
+ julia> @benchmark parse_file2("input")
+BenchmarkTools.Trial: 10000 samples with 1 evaluation.
+ Range (min … max):  37.181 μs … 952.436 μs  ┊ GC (min … max): 0.00% … 89.17%
+ Time  (median):     38.474 μs               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   41.726 μs ±  23.707 μs  ┊ GC (mean ± σ):  1.52% ±  2.81%
+
+   ▆█▇▄▂        ▁▃                              ▂▂▁▂▁▁         ▂
+  ▇█████▇▇▇██▇▇▇███▆▅▅▅▄▄▅▅▄▄▁▄▄▄▃▄▄▄▅▄▄▄▅▅▄▆▇██████████▇▆▆▆▅▅ █
+  37.2 μs       Histogram: log(frequency) by time      64.3 μs <
 
  Memory estimate: 55.85 KiB, allocs estimate: 14.
-
 #for comparison, the super slow parse_file: 
  julia> @benchmark parse_file("input")
 BenchmarkTools.Trial: 10000 samples with 1 evaluation.
