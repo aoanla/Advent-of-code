@@ -80,7 +80,7 @@ end
 """
 function parse_file(fname)
     open(fname) do f
-        arr = [];
+        arr = Vector{Vector{Int64}}();
         for line in eachline(f)
             push!(arr, append!([0], parse.(Int64,split(line))));
         end
@@ -88,9 +88,8 @@ function parse_file(fname)
     end
 end
 
-function solve(fname)
-    arr = parse_file(fname); #parse
-    l = length(arr[1]); #data is rectangular, don't recheck last
+function solve(arr::Vector{Vector{Int64}})
+    l = length(arr[1]); #data is rectangular, don't recheck each time
     parts = [0,0];
     for line in arr
         extend_front_and_back!(line, l)
@@ -98,5 +97,12 @@ function solve(fname)
     end
     parts
 end
+
+function solve(fname::String)
+    arr = parse_file(fname); #parse
+    solve(arr)
+end
+
+
 
 println("""$(solve("input"))""");
