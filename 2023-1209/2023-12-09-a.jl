@@ -1,5 +1,6 @@
 
 using Printf
+using BenchmarkTools
 
 """
     finite_diff(x)
@@ -47,7 +48,7 @@ end
 function extend_front_and_back!(x, l)
     s = false;
     sgn = 1;
-    next_x = x[end];
+    next_x = x[l];
     prev_x = x[2];
     while !s #differentiate until we hit the constant differences
         #inlined function (s,l) = finite_diff!(samples, l);
@@ -88,7 +89,36 @@ function parse_file(fname)
     end
 end
 
-function solve(arr::Vector{Vector{Int64}})
+#bulk read and then size statically sized matrix for data
+function parse_file2(fname)
+    data = read(fname);
+    cols = count(==(0xA), data); #faster to just work with bytes than Unicode here - this is '\n'
+    rows = 2 + count(==(0x20), data) ÷ cols; #this is ' ' - and we add 2 (one for the last num in the line, and one for our leading sentinel)
+    arr = Array{Int64, 2}(undef,cols,rows); #TODO make this stack not heap
+    col = 1;
+    row = 2;
+    num = 0;
+    for i in data
+        if i == 0x20 #new num
+            arr[col, row] = num;
+            num = 0;
+            row += 1;
+            continue;
+        end
+        if i == 0xA #new col
+            arr[col, row] = num;
+            num = 0;
+            row = 2;
+            col += 1;
+            continue;
+        end
+        num = (num * 10) + i - 0x30; #'0'
+    end 
+    arr
+end
+
+
+function solve!(arr::Vector{Vector{Int64}})
     l = length(arr[1]); #data is rectangular, don't recheck each time
     parts = [0,0];
     for line in arr
@@ -98,11 +128,27 @@ function solve(arr::Vector{Vector{Int64}})
     parts
 end
 
-function solve(fname::String)
-    arr = parse_file(fname); #parse
-    solve(arr)
+function solve!(arr::Matrix{Int64})
+    l = size(arr, 2); #data is rectangular, don't recheck each time
+    parts = [0,0];
+    for i in axes(arr,1)
+        @views extend_front_and_back!(arr[i,:], l); #need a reference not a copy, so @views
+        parts += arr[i, 1:2];
+    end
+    parts
 end
 
 
+function solve(fname::String)
+    arr = parse_file(fname); #parse
+    solve!(arr)
+end
 
-println("""$(solve("input"))""");
+function solve2(fname::String)
+    arr = parse_file2(fname); #parse, to matrix
+    solve!(arr)
+end
+
+#@benchmark solve(arrc) setup=(arrc=deepcopy(arr))
+
+#println("""$(solve("input"))""");
