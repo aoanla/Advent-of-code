@@ -4,7 +4,7 @@
 
 #this is the first puzzle where we can't really get away with parsing line-by-line and need to pull in the whole file first
 
-d = read("input2");
+d = read("input");
 
 
 size = length(d); #unsure if I should count the newlines here or not tbh - or if I should floodfill them
@@ -63,50 +63,34 @@ function follow_pipe_and_mark!(curr_pipe, entry_dir, d)
     (curr_pipe, entry_dir)
 end
 
-marked(x) = (x & 0x80) == 0x80  ;
-horiz_wall(x) = x == (b('-')|0x80) ;
-vert_wall(x) = x == (b('|')|0x80) ;
-already_filled(x) = x == (b('O'));  
+marked(x) = (x&0x80) == 0x80 ;
+horiz_wall(x) = x==(b('-')|0x80);
 
-"""checks if we can move in dir from curr without hitting a blocking boundary, and mutates cell if it's not a loop element
-    returns (can_we_move?, add_to_counter, where_are_we_now?)
-    DOES check boundaries of the map!!! (at loc < 0, loc > size, or a loc moving from loc % s = 0 to 1 or vice versa  )
-"""
-function attempt_move(curr, dir)
-    new = curr+dir;
-    #boundaries
-    ( new < 0 || new > size || ( dir == e && new % s == 1 ) || ( dir == w && new % s == 0 ) ) && return (false, 0, curr);
-    cell = d[new]; #candidate cell
-    #stop if we hit an already filled patch
-    already_filled(cell) && return (false, 0, curr);
-    ##a blocking wall means no 
-    ( horiz_wall(cell) && abs(dir) == s ) && return (false, 0, curr);
-    ( vert_wall(cell) && abs(dir) == e ) && return (false, 0, curr);
-    if marked(cell) == false #move is allowed and is mutating [not a loop element we flow down]
-        d[new] = b('O');
-        counter = 1
-        return (true, 1, new); 
-    end
-    (true, 0, new)
-end
-    
-
-"""Floodfill algorithm, bounded by Ss, on d starting at boundaries"""
-function floodfill_with_count(d)
+"""cast rays through d, vertically, counting cells with an odd-crossing count (interior cells)"""
+function raycast!(d) 
     accum = 0;
-    #fill from top first
-    for i in (1-s):0  #"zeroth" row
+    for i in 1:s-1 
         cell = i;
-        result = true;
-        dir = s; 
-        while result 
-            (result, count, cell) =  attempt_move(cell, dir);
-            accum += count;
+        polarity = 0;
+        while cell <= size
+            contents = d[cell];
+            #handle boundaries, which is subtle - perpendicular boundaries (here, horizontal) just flip the sign, others don't, we just need to skip them!
+            # but *some* bends should count as perpendicular boundaries (when they're next to a horizontal?)
+            if horiz_wall(contents)
+                polarity = 1 - polarity;
+            elseif marked(contents) #not a perpendicular boundary, so just flow along it
+                while (cell<=size-s) && !horiz_wall(d[cell+s]) && marked(d[cell+s])
+                    cell += s
+                end
+            else
+                accum += polarity;
+                d[cell] = b('0')+polarity;
+            end
+            cell += s;
         end
     end
     accum
 end
-
 
 function solve(d)
     (curr_pipe, entry_dir) = find_start_and_connector(d);
@@ -134,16 +118,12 @@ function solve2!(d)
     c = encode[(start_dir, -entry_dir)];
     println("S was a $c !");
     d[curr_pipe] = c | 0x80; #mark and set type
-    inside = total - steps #"the boundary" can't be inside itself.
     println("Total $steps to circumnavigate, halfway is thus $(steps ÷ 2)");
-    println("")
-    inside -= floodfill_with_count(d);
-    println("Remaining cells = $inside");
-    #restore newlines
-    for i in s:s:size
-        d[i] = b('\n');
-    end
-    println("$(String(d.&0x7f))") #remove marker bits
+    println("");
+    inside = raycast!(d);
+    println("Inside cells: $inside");
+    println();
+    println("$(String(d.&0x7f))"); #remove marker bits
 end
 
 solve2!(d)
