@@ -82,7 +82,7 @@ function attempt_move(curr, dir)
     ##a blocking wall means no 
     ( horiz_wall(cell) && abs(dir) == s ) && return (false, 0, curr);
     ( vert_wall(cell) && abs(dir) == e ) && return (false, 0, curr);
-    if marked(new) == false #move is allowed and is mutating [not a loop element we flow down]
+    if marked(cell) == false #move is allowed and is mutating [not a loop element we flow down]
         d[new] = b('O');
         counter = 1
         return (true, 1, new); 
@@ -95,7 +95,7 @@ end
 function floodfill_with_count(d)
     accum = 0;
     #fill from top first
-    for i in 1:s  #first row
+    for i in (1-s):0  #"zeroth" row
         cell = i;
         result = true;
         dir = s; 
