@@ -6,3 +6,7 @@ Evolving plan is, ordered by priority:
 1. Solve Part 1 and Part 2 for a day in Julia
 2. Solve at least one Part for the day in Rust - playing with parsers here (nom for Day5,6;probably winnow for Day7)
 3. If I am feeling up to it, solve at least one Part for the day in Uiua (Day 1(both), Day4(1), Day6(both))
+
+Note: unlike some people, I'm including "reading the input file" as part of the execution. (I see some solutions that #include the input text directly into the 
+code). *Mostly* I'm not, therefore, too bothered about optimising the raw parser (the bit that converts text -> data), since I always have the overhead of reading
+from the filesystem...
