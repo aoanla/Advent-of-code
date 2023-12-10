@@ -6,8 +6,11 @@
 
 d = read("input2");
 
+
 size = length(d); #unsure if I should count the newlines here or not tbh - or if I should floodfill them
 total = size;
+println("Size is: $size");
+
 
 b(x) = UInt8(x);
 
@@ -72,15 +75,15 @@ already_filled(x) = x == (b('O'));
 function attempt_move(curr, dir)
     new = curr+dir;
     #boundaries
-    new < 0 || new > size || (dir == e && new % s == 0 ) || (dir == w && new % s == 1) && return (false, 0, curr);
+    ( new < 0 || new > size || ( dir == e && new % s == 1 ) || ( dir == w && new % s == 0 ) ) && return (false, 0, curr);
     cell = d[new]; #candidate cell
     #stop if we hit an already filled patch
     already_filled(cell) && return (false, 0, curr);
     ##a blocking wall means no 
-    horiz_wall(cell) && abs(dir) == s && return (false, 0, curr);
-    vert_wall(cell) && abs(dir) == e && return (false, 0, curr);
-    if !marked(new) #move is allowed and is mutating [not a loop element we flow down]
-        d[ch] = b('O');
+    ( horiz_wall(cell) && abs(dir) == s ) && return (false, 0, curr);
+    ( vert_wall(cell) && abs(dir) == e ) && return (false, 0, curr);
+    if marked(new) == false #move is allowed and is mutating [not a loop element we flow down]
+        d[new] = b('O');
         counter = 1
         return (true, 1, new); 
     end
@@ -89,7 +92,7 @@ end
     
 
 """Floodfill algorithm, bounded by Ss, on d starting at boundaries"""
-function floodfill_with_count(start, d)
+function floodfill_with_count(d)
     accum = 0;
     #fill from top first
     for i in 1:s  #first row
@@ -120,6 +123,7 @@ solve(d);
 
 #solve part 2, destructively on d
 function solve2!(d)
+    println("$(String(d.&0x7f))") #remove marker bits
     (curr_pipe, entry_dir) = find_start_and_connector(d);
     start_dir = entry_dir;
     steps = 1;
@@ -133,6 +137,12 @@ function solve2!(d)
     inside = total - steps #"the boundary" can't be inside itself.
     println("Total $steps to circumnavigate, halfway is thus $(steps ÷ 2)");
     println("")
+    inside -= floodfill_with_count(d);
+    println("Remaining cells = $inside");
+    #restore newlines
+    for i in s:s:size
+        d[i] = b('\n');
+    end
     println("$(String(d.&0x7f))") #remove marker bits
 end
 
