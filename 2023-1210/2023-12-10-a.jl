@@ -6,7 +6,8 @@
 
 d = read("input2");
 
-total = length(d); #unsure if I should count the newlines here or not tbh - or if I should floodfill them
+size = length(d); #unsure if I should count the newlines here or not tbh - or if I should floodfill them
+total = size;
 
 b(x) = UInt8(x);
 
@@ -30,8 +31,6 @@ decode = Dict([
 
      #for the S to id it for part 2 leak detection
 encode = Dict([(v=>k) for (k,v) in pairs(decode)]);
-
-
 
 
 function find_start_and_connector(d)
@@ -61,15 +60,57 @@ function follow_pipe_and_mark!(curr_pipe, entry_dir, d)
     (curr_pipe, entry_dir)
 end
 
-#=
+marked(x) = (x & 0x80) == 0x80  ;
+horiz_wall(x) = x == (b('-')|0x80) ;
+vert_wall(x) = x == (b('|')|0x80) ;
+
+"""checks if we can move in dir from curr without hitting a blocking boundary, and mutates cell if it's not a loop element
+    returns (can_we_move?, add_to_counter, where_are_we_now?)
+    DOES NOT check boundaries of the map!!! (at loc < 0, loc > size, or a loc moving from loc % s = 0 to 1 or vice versa  )
+"""
+function attempt_move(curr, dir)
+    new = curr+dir;
+    cell = d[new]; #candidate cell
+    ##a blocking wall means no
+    horiz_wall(cell) && abs(dir) == s && return (false, 0, curr);
+    vert_wall(cell) && abs(dir) == e && return (false, 0, curr);
+    if !marked(new) #move is allowed and is mutating [not a loop element we flow down]
+        d[ch] = b('O');
+        counter = 1
+        return (true, 1, new); 
+    end
+    (true, 0, new)
+end
+    
+
 """Floodfill algorithm, bounded by Ss, on d starting at boundaries"""
 function floodfill_with_count(start, d)
     #fill from top first
     for i in 1:s  #first row
-        d[i] == b('S')  
+
+        #vertical floodfill step
+        #not part of the loop
+        if !marked(x)
+            d[ch] = b('O');
+            count += 1;
+        end
+        #horizontal boundary blocks vertical floodfill
+        x==(b('-')|0x80) && break;
+        #anything else is a "loop char" we can flow through to continue floodfilling, vertically
+        #but it isn't altered by the floodfill and doesn't count towards our total
+
+        #flow vertically one step 
+        loc += s; #or n depending
+
+
+        #horizontal floodfill step 
+        if !marked(x)
+            d[ch]
+
+ 
     count
 end
-=#
+
 
 function solve(d)
     (curr_pipe, entry_dir) = find_start_and_connector(d);
