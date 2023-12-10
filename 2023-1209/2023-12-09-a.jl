@@ -93,8 +93,7 @@ function parse_file(fname)
 end
 
 #bulk read and then size statically sized matrix for data
-function parse_file2(fname)
-    data = read(fname);
+function parse_data(data)
     cols = count(==(0xA), data); #faster to just work with bytes than Unicode here - this is '\n'
     rows = 2 + count(==(0x20), data) ÷ cols; #this is ' ' - and we add 2 (one for the last num in the line, and one for our leading sentinel)
     arr = Array{Int64, 2}(undef,rows,cols); #TODO make this stack not heap
@@ -127,6 +126,10 @@ function parse_file2(fname)
     arr
 end
 
+function parse_file2(fname)
+    data = read(fname);
+    parse_data(data)
+end
 
 function solve!(arr::Vector{Vector{Int64}})
     l = length(arr[1]); #data is rectangular, don't recheck each time
@@ -156,6 +159,11 @@ end
 
 function solve2(fname::String)
     arr = parse_file2(fname); #parse, to matrix
+    solve!(arr)
+end
+
+function solve_d(data)
+    arr = parse_data(data);
     solve!(arr)
 end
 
