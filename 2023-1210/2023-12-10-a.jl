@@ -63,6 +63,7 @@ end
 marked(x) = (x & 0x80) == 0x80  ;
 horiz_wall(x) = x == (b('-')|0x80) ;
 vert_wall(x) = x == (b('|')|0x80) ;
+already_filled(x) = x == (b('O'));  
 
 """checks if we can move in dir from curr without hitting a blocking boundary, and mutates cell if it's not a loop element
     returns (can_we_move?, add_to_counter, where_are_we_now?)
@@ -71,7 +72,9 @@ vert_wall(x) = x == (b('|')|0x80) ;
 function attempt_move(curr, dir)
     new = curr+dir;
     cell = d[new]; #candidate cell
-    ##a blocking wall means no
+    #stop if we hit an already filled patch
+    already_filled(cell) && return (false, 0, curr);
+    ##a blocking wall means no 
     horiz_wall(cell) && abs(dir) == s && return (false, 0, curr);
     vert_wall(cell) && abs(dir) == e && return (false, 0, curr);
     if !marked(new) #move is allowed and is mutating [not a loop element we flow down]
@@ -85,30 +88,18 @@ end
 
 """Floodfill algorithm, bounded by Ss, on d starting at boundaries"""
 function floodfill_with_count(start, d)
+    accum = 0;
     #fill from top first
     for i in 1:s  #first row
-
-        #vertical floodfill step
-        #not part of the loop
-        if !marked(x)
-            d[ch] = b('O');
-            count += 1;
+        cell = i;
+        result = true;
+        dir = s; 
+        while result 
+            (result, count, cell) =  attempt_move(cell, dir);
+            accum += count;
         end
-        #horizontal boundary blocks vertical floodfill
-        x==(b('-')|0x80) && break;
-        #anything else is a "loop char" we can flow through to continue floodfilling, vertically
-        #but it isn't altered by the floodfill and doesn't count towards our total
-
-        #flow vertically one step 
-        loc += s; #or n depending
-
-
-        #horizontal floodfill step 
-        if !marked(x)
-            d[ch]
-
- 
-    count
+    end
+    accum
 end
 
 
