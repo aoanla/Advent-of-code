@@ -67,10 +67,12 @@ already_filled(x) = x == (b('O'));
 
 """checks if we can move in dir from curr without hitting a blocking boundary, and mutates cell if it's not a loop element
     returns (can_we_move?, add_to_counter, where_are_we_now?)
-    DOES NOT check boundaries of the map!!! (at loc < 0, loc > size, or a loc moving from loc % s = 0 to 1 or vice versa  )
+    DOES check boundaries of the map!!! (at loc < 0, loc > size, or a loc moving from loc % s = 0 to 1 or vice versa  )
 """
 function attempt_move(curr, dir)
     new = curr+dir;
+    #boundaries
+    new < 0 || new > size || (dir == e && new % s == 0 ) || (dir == w && new % s == 1) && return (false, 0, curr);
     cell = d[new]; #candidate cell
     #stop if we hit an already filled patch
     already_filled(cell) && return (false, 0, curr);
