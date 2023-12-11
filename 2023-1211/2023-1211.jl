@@ -21,6 +21,11 @@ for (row,col) in galaxies
     bigrows2[row] = 1; #this row doesn't expand
 end 
 #println("$galaxies");
+#make our accumlated distances to avoid quadratic calculations later on [see comment down there]
+#   (I really want to use foldl for this... )
+distsrows = foldl(bigrows, [0]) do accum, r
+    push!(accum, accum[end]+r) #is this push! okay given that we get passed accum?
+end
 
 numgs = length(galaxies);
 #pair distances
