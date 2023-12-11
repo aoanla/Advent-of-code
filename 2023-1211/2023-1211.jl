@@ -7,17 +7,42 @@ rowl = findfirst(x->x==b('\n'), d);
 coll = length(d) ÷ rowl;
 space = reshape(d, rowl, :);
 
-bigcols = ones(UInt8, rowl);
-bigrows = ones(UInt8, coll); 
+bigcols = fill(2, rowl);
+bigrows = fill(2, coll); 
+bigcols2 = fill(1000000, rowl);
+bigrows2 = fill(1000000, coll); 
 
-#for # in array
-# add # to list
-# set bigcols(col) = 0
-# set bigrows(row) = 0
+#it's probably faster to iterate through the grid and check for #, adding them and setting as we go, but this is easier to write
+galaxies = Tuple.(findall(x->x==b('#'), space)); #need to Tuple to make this easily deconstructible?
+for (row,col) in galaxies
+    bigcols[col] = 1; #this col doesn't expand
+    bigrows[row] = 1; #this row doesn't expand
+    bigcols2[col] = 1; #this col doesn't expand
+    bigrows2[row] = 1; #this row doesn't expand
+end 
+#println("$galaxies");
 
+numgs = length(galaxies);
 #pair distances
-#for i in list
-#  for j in list[i:]
-#        metropolis_dist + sum(bigrows[range]) + sum(bigcols[range])
+function solve(galaxies, bigcols, bigrows)
+    sumdist = 0;
+    sumdist2 = 0;
+    for i in 1:numgs
+        (row,col) = galaxies[i];
+        for (row2, col2) in galaxies[i+1:end]
+            #order rows to get range right
+            (lrow, rrow) = (row > row2) ? (row2, row) : (row, row2);
+            # (lcol, rcol) = (col > col1) I shouldn't need to sort these if findall iterates in order through the array...
+            dist=sum(bigrows[lrow:rrow]) + sum(bigcols[col:col2]) -2;
+            dist2=sum(bigrows2[lrow:rrow]) + sum(bigcols2[col:col2]) -2;
+            #println("dist $i $j = $dist")
+            sumdist += dist;
+            sumdist2 += dist2;
+        end 
+    end
+    (sumdist, sumdist2)
+end
 
-#sum()
+println("Sum is $(solve(galaxies, bigcols, bigrows))")
+
+#println("Sum is $sumdist");
