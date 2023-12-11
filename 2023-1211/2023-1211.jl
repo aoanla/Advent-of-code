@@ -23,9 +23,16 @@ end
 #println("$galaxies");
 #make our accumlated distances to avoid quadratic calculations later on [see comment down there]
 #   (I really want to use foldl for this... )
-distsrows = foldl(bigrows, [0]) do accum, r
-    push!(accum, accum[end]+r) #is this push! okay given that we get passed accum?
+history_accum(l) = foldl(l; init=[0]) do accum, r
+    accum[end] += r;
+    push!(accum, accum[end]);
+    accum
 end
+
+dist_rows = history_accum(bigrows);
+dist_cols = history_accum(bigcols);
+dist_cols2 = history_accum(bigcols2);
+dist_rows2 = history_accum(bigrows2);
 
 numgs = length(galaxies);
 #pair distances
@@ -35,15 +42,9 @@ function solve(galaxies, bigcols, bigrows)
     for i in 1:numgs
         (row,col) = galaxies[i];
         for (row2, col2) in galaxies[i+1:end]
-            #order rows to get range right
-            (lrow, rrow) = (row > row2) ? (row2, row) : (row, row2);
-            # (lcol, rcol) = (col > col1) I shouldn't need to sort these if findall iterates in order through the array...
-            #obviously we should precompute "sum 1:row" and "sum 1:col" and then just subtract the two sums to avoid doing this quadratically
-            dist=sum(bigrows[lrow:rrow]) + sum(bigcols[col:col2]) -2; #-2 removes the "final step h and v" which we shouldn't count
-            dist2=sum(bigrows2[lrow:rrow]) + sum(bigcols2[col:col2]) -2;
-            #println("dist $i $j = $dist")
-            sumdist += dist;
-            sumdist2 += dist2;
+            #only need the abs for rows because cols are ordered
+            sumdist += abs(dist_rows[row2]-dist_rows[row]) + dist_cols[col2] - dist_cols[col];
+            sumdist2 += abs(dist_rows2[row2]-dist_rows2[row]) + dist_cols2[col2] - dist_cols2[col];
         end 
     end
     (sumdist, sumdist2)
