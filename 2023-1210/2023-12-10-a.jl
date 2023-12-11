@@ -66,8 +66,18 @@ end
 marked(x) = (x&0x80) == 0x80 ;
 horiz_wall(x) = x==(b('-')|0x80);
 
+
+#note - the iteration order here is the wrong winding (row-major not column-major)
+# that's because this is the test-case for the efficient version where we form bitvectors for each row during the pipe-tracing (part 1) phase
+# mask- (mask for - chars), maskFL (mask for FL chars), mask_notpipe (mask for elements that aren't pipe [and thus could be "inside" or "outside"])
+# then step per row is:
+# accum_mask- \xor= mask-[thisrow]
+# accum_maskFJ \xor= maskFJ[thisrow]
+# inside += count_ones( (accum_mask_ \xor accum_maskFJ) & mask_notpipe ) 
+# where the count_ones here should reduce to single popcnt instruction on any modern CPU [per resultant bitvector of argument]
+
 """cast rays through d, vertically, counting cells with an odd-crossing count (interior cells)"""
-function raycast!(d) 
+function raycast(d) 
     accum = 0;
     for i in 1:s-1 
         cell = i;
@@ -133,7 +143,7 @@ function solve2!(d)
     d[curr_pipe] = c | 0x80; #mark and set type
     println("Total $steps to circumnavigate, halfway is thus $(steps ÷ 2)");
     println("");
-    inside = raycast!(d);
+    inside = raycast(d);
     println("Inside cells: $inside");
     println();
     println("$(String(d.&0x7f))"); #remove marker bits
