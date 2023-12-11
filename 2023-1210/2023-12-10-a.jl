@@ -15,7 +15,7 @@ println("Size is: $size");
 b(x) = UInt8(x);
 
 s = findfirst(x-> x==b('\n'), d); #going "up" a row is subtracting stride 
-
+lines = total ÷ s;
 # Tuple(usize,usize)
 n = -s;
 e = 1;
@@ -72,12 +72,12 @@ horiz_wall(x) = x==(b('-')|0x80);
 # mask- (mask for - chars), maskFL (mask for FL chars), mask_notpipe (mask for elements that aren't pipe [and thus could be "inside" or "outside"])
 # then step per row is:
 # accum_mask- \xor= mask-[thisrow]
-# accum_maskFJ \xor= maskFJ[thisrow]
-# inside += count_ones( (accum_mask_ \xor accum_maskFJ) & mask_notpipe ) 
+# accum_maskFL \xor= maskFL[thisrow]
+# inside += count_ones( (accum_mask_ \xor accum_maskFL) & mask_notpipe ) 
 # where the count_ones here should reduce to single popcnt instruction on any modern CPU [per resultant bitvector of argument]
 
 """cast rays through d, vertically, counting cells with an odd-crossing count (interior cells)"""
-function raycast(d) 
+function raycast!(d) 
     accum = 0;
     for i in 1:s-1 
         cell = i;
@@ -115,6 +115,24 @@ function raycast(d)
     accum
 end
 
+print_bool(x) = println(join([ xi ? "1" : "0" for xi in x])) ;
+
+"""The efficient bitarray raycast"""
+function raycast(maskh, maskFJ, mask_nopipe)
+    hpol = falses(s); #outside currently
+    FJpol = falses(s);
+    insides = 0;
+    for i in 1:lines 
+        hpol .⊻= maskh[:,i];
+        FJpol .⊻= maskFJ[:,i];
+        print_bool(  FJpol );
+        #for no good reason, there is no count_ones defined on BitVectors, even though this is obviously popcnt on each underlying int!
+        #insides += count_ones( (hpol .⊻ FJpol) .& mask_nopipe[:,i] );
+        insides += sum( (hpol .⊻ FJpol) .& mask_nopipe[:,i] );
+    end
+    insides
+end
+
 function solve(d)
     (curr_pipe, entry_dir) = find_start_and_connector(d);
     steps = 1;
@@ -128,14 +146,33 @@ end
 
 solve(d);
 
+horiz(x) = x == b('-');
+FJ(x) = x in [b('F')|0x80, b('J')|0x80];
+
+
 #solve part 2, destructively on d
 function solve2!(d)
     println("$(String(d.&0x7f))") #remove marker bits
+    maskhorz = falses(s, lines);
+    maskFJ = falses(s, lines);
+    mask_nopipe = trues(s, lines);
+
     (curr_pipe, entry_dir) = find_start_and_connector(d);
     start_dir = entry_dir;
     steps = 1;
-    while d[curr_pipe] != b('S')
+    (x,y) = (curr_pipe % s, 1+ (curr_pipe ÷ s));
+    mask_nopipe[x,y] = false;
+    pipechar = d[curr_pipe];
+    maskhorz[x,y] = horiz(pipechar); #these aren't ever true somehow
+    maskFJ[x,y] = FJ(pipechar);  #these aren't ever true somehow...
+    while pipechar != b('S')
         (curr_pipe, entry_dir) = follow_pipe_and_mark!(curr_pipe, entry_dir, d);
+        #(curr_pipe, entry_dir) = follow_pipe(curr_pipe, entry_dir, d);
+        (x,y) = (curr_pipe % s, 1+(curr_pipe ÷ s));
+        mask_nopipe[x,y] = false;
+        pipechar = d[curr_pipe];
+        maskhorz[x,y] = horiz_wall(pipechar);
+        maskFJ[x,y] = FJ(pipechar);
         steps += 1;
     end
     c = encode[(start_dir, -entry_dir)];
@@ -143,7 +180,9 @@ function solve2!(d)
     d[curr_pipe] = c | 0x80; #mark and set type
     println("Total $steps to circumnavigate, halfway is thus $(steps ÷ 2)");
     println("");
-    inside = raycast(d);
+    inside = raycast!(d);
+    println("Inside cells: $inside");
+    inside = raycast(maskhorz, maskFJ, mask_nopipe);
     println("Inside cells: $inside");
     println();
     println("$(String(d.&0x7f))"); #remove marker bits
