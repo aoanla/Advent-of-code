@@ -33,6 +33,7 @@ function solve(galaxies, bigcols, bigrows)
             #order rows to get range right
             (lrow, rrow) = (row > row2) ? (row2, row) : (row, row2);
             # (lcol, rcol) = (col > col1) I shouldn't need to sort these if findall iterates in order through the array...
+            #obviously we should precompute "sum 1:row" and "sum 1:col" and then just subtract the two sums to avoid doing this quadratically
             dist=sum(bigrows[lrow:rrow]) + sum(bigcols[col:col2]) -2; #-2 removes the "final step h and v" which we shouldn't count
             dist2=sum(bigrows2[lrow:rrow]) + sum(bigcols2[col:col2]) -2;
             #println("dist $i $j = $dist")
