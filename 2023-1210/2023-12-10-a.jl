@@ -75,12 +75,25 @@ function raycast!(d)
         while cell <= size
             contents = d[cell];
             #handle boundaries, which is subtle - perpendicular boundaries (here, horizontal) just flip the sign, others don't, we just need to skip them!
-            # but *some* bends should count as perpendicular boundaries (when they're next to a horizontal?)
-            if horiz_wall(contents)
-                polarity = 1 - polarity;
-            elseif marked(contents) #not a perpendicular boundary, so just flow along it
-                while (cell<=size-s) && !horiz_wall(d[cell+s]) && marked(d[cell+s])
-                    cell += s
+            # but *some* bends should count as perpendicular boundaries (when we exit the set with the same "directional turn" as we entered
+            # that is 
+            #           F                               7
+            #           |  a zero polarity set          |   a switching set === -
+            #           L                               L
+
+            if marked(contents)
+                horiz = horiz_wall(contents);
+                right = contents in [b('F')|0x80, b('L')|0x80]; #polarity of this will be odd if we need to switch polarity one more time
+                while (cell<=size-s) && marked(d[cell+s])
+                    cell += s;
+                    contents = d[cell];
+                    horiz ⊻= horiz_wall(contents);
+                    right ⊻= contents in [b('F')|0x80, b('L')|0x80];
+
+                end
+                #... *after* we finish the set, we switch polarity if xor(horiz,right) is true and only if that is true
+                if (horiz ⊻ right) 
+                    polarity = 1 - polarity;
                 end
             else
                 accum += polarity;
