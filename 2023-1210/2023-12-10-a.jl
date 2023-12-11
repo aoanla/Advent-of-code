@@ -117,18 +117,17 @@ end
 
 print_bool(x) = println(join([ xi ? "1" : "0" for xi in x])) ;
 
-"""The efficient bitarray raycast"""
-function raycast(maskh, maskFJ, mask_nopipe)
+"""The efficient bitarray raycast - this is *actually slower* in Julia, I suspect because it's not optimising bitlevel operations sufficiently well"""
+function raycast(maskh, maskFL, mask_nopipe)
     hpol = falses(s); #outside currently
-    FJpol = falses(s);
+    FLpol = falses(s);
     insides = 0;
     for i in 1:lines 
         hpol .⊻= maskh[:,i];
-        FJpol .⊻= maskFJ[:,i];
-        print_bool(  FJpol );
+        FLpol .⊻= maskFL[:,i];
         #for no good reason, there is no count_ones defined on BitVectors, even though this is obviously popcnt on each underlying int!
         #insides += count_ones( (hpol .⊻ FJpol) .& mask_nopipe[:,i] );
-        insides += sum( (hpol .⊻ FJpol) .& mask_nopipe[:,i] );
+        insides += sum( (hpol .⊻ FLpol) .& mask_nopipe[:,i] );
     end
     insides
 end
@@ -147,14 +146,15 @@ end
 solve(d);
 
 horiz(x) = x == b('-');
-FJ(x) = x in [b('F')|0x80, b('J')|0x80];
+FL(x) = x in [b('F'), b('L')];
 
 
 #solve part 2, destructively on d
 function solve2!(d)
     println("$(String(d.&0x7f))") #remove marker bits
+    println("Match chars are $('F'+0x80) and $('J'+0x80)");
     maskhorz = falses(s, lines);
-    maskFJ = falses(s, lines);
+    maskFL = falses(s, lines);
     mask_nopipe = trues(s, lines);
 
     (curr_pipe, entry_dir) = find_start_and_connector(d);
@@ -163,26 +163,31 @@ function solve2!(d)
     (x,y) = (curr_pipe % s, 1+ (curr_pipe ÷ s));
     mask_nopipe[x,y] = false;
     pipechar = d[curr_pipe];
-    maskhorz[x,y] = horiz(pipechar); #these aren't ever true somehow
-    maskFJ[x,y] = FJ(pipechar);  #these aren't ever true somehow...
+    maskhorz[x,y] = horiz_wall(pipechar); #these aren't ever true somehow
+    maskFL[x,y] = FL(pipechar);  #these aren't ever true somehow...
     while pipechar != b('S')
         (curr_pipe, entry_dir) = follow_pipe_and_mark!(curr_pipe, entry_dir, d);
         #(curr_pipe, entry_dir) = follow_pipe(curr_pipe, entry_dir, d);
         (x,y) = (curr_pipe % s, 1+(curr_pipe ÷ s));
         mask_nopipe[x,y] = false;
         pipechar = d[curr_pipe];
-        maskhorz[x,y] = horiz_wall(pipechar);
-        maskFJ[x,y] = FJ(pipechar);
+        maskhorz[x,y] = horiz(pipechar);
+        maskFL[x,y] = FL(pipechar);
         steps += 1;
     end
+
     c = encode[(start_dir, -entry_dir)];
-    println("S was a $c !");
+    maskhorz[x,y] = horiz(c);
+    maskFL[x,y] = FL(c);
+    println("S was a $(Char(c)) !");
     d[curr_pipe] = c | 0x80; #mark and set type
     println("Total $steps to circumnavigate, halfway is thus $(steps ÷ 2)");
     println("");
-    inside = raycast!(d);
+    raycast!(d);
+    raycast(maskhorz, maskFL, mask_nopipe);
+    @time inside = raycast!(d);
     println("Inside cells: $inside");
-    inside = raycast(maskhorz, maskFJ, mask_nopipe);
+    @time inside = raycast(maskhorz, maskFL, mask_nopipe);
     println("Inside cells: $inside");
     println();
     println("$(String(d.&0x7f))"); #remove marker bits
