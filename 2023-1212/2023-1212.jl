@@ -16,12 +16,31 @@
 
 #fn(substring)
 # matches = 0;
+# [try first match and recurse]
+#
 #while match(window_n, substring)
 #   if not last window
-#       matches += call fn(window_n+1, substring - [sequence we just consumed, changing new first elem to a .])
+#       if nothing_memoised
+#           (matches, memoised_substring_lengths) += call fn(window_n+1, substring - [sequence we just consumed, changing new first elem to a .])
+        else
+            matches+= memoised_matches where substring <= current substring length
 #   else
-#       matches+=1
-#return matches
+#       (matches, memoised_substring_length_at_match) += 1, match_length
+#return ( matches, memoised_list_of_matches_by_substring)
 
 #that seems relatively sensible?
 #the matches are either just using regex or I could write a sliding-window thing myself if I cared
+
+match(window_n, substring_start, string)
+    for i in substring_start:length(string)-window_n
+    #or
+    i = substring_start
+    while string[i] != '#' #we must match a *space* before this sequence starts
+        #match if
+        string[i] to string[i+window_n-1] != '.' 
+        #and
+        string[i+window_n] != '#'
+        #and do
+            #match++
+            #push (i) => list_of_match_posns
+            i+=1
