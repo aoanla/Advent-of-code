@@ -15,7 +15,7 @@
 #so, from the left or the right:
 
 #if from the left, the left of the window can be the sequence start - if we always ensure the next substring would start with a . (or ?) [which it would if the right 
-of the window catches it but isn't included in the "match string" removed.]
+#of the window catches it but isn't included in the "match string" removed.]
 
 #fn(substring)
 # matches = 0;
@@ -25,8 +25,8 @@ of the window catches it but isn't included in the "match string" removed.]
 #   if not last window
 #       if nothing_memoised
 #           (matches, memoised_substring_lengths) += call fn(window_n+1, substring - [sequence we just consumed])
-        else
-            matches+= memoised_matches where substring <= current substring length
+#        else
+#            matches+= memoised_matches where substring <= current substring length
 #   else
 #       (matches, memoised_substring_length_at_match) += 1, match_length
 #return ( matches, memoised_list_of_matches_by_substring)
@@ -34,16 +34,37 @@ of the window catches it but isn't included in the "match string" removed.]
 #that seems relatively sensible?
 #the matches are either just using regex or I could write a sliding-window thing myself if I cared
 
-match(window_n, substring_start, string)
-    for i in substring_start:length(string)-window_n
+#match(window_n, substring_start, string)
+ #   for i in substring_start:length(string)-window_n
     #or
-    i = substring_start
-    while string[i] != '#' #we must match a *space* before this sequence starts
+ #   i = substring_start
+ #   while string[i] != '#' #we must match a *space* before this sequence starts
         #match if
-        string[i] to string[i+window_n-1] != '.' 
+ #       string[i] to string[i+window_n-1] != '.' 
         #and
-        string[i+window_n] != '#'
+ #       string[i+window_n] != '#'
         #and do
             #match++
             #push (i) => list_of_match_posns
-            i+=1
+  #          i+=1
+
+d = read("input", String); 
+
+codes = Array{String}();
+patterns = Array{Array{Int8}}();
+
+function parse_line(line)
+    (code, windows) = split(line, ' ');
+    (code, parse.(Int8, (split(windows, ',')) ) ) 
+end
+
+for line in split(d, '\n')
+@views   push!((codes,patterns), parse_line(line) ) ; 
+end
+
+
+#memoisation unit - length of substring needed for this submatch, number of matches in it
+struct sub_match
+    length::Int
+    matches::Int
+end
