@@ -24,3 +24,4 @@
 #return matches
 
 #that seems relatively sensible?
+#the matches are either just using regex or I could write a sliding-window thing myself if I cared
