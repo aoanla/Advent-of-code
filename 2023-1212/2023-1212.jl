@@ -14,6 +14,9 @@
 
 #so, from the left or the right:
 
+#if from the left, the left of the window can be the sequence start - if we always ensure the next substring would start with a . (or ?) [which it would if the right 
+of the window catches it but isn't included in the "match string" removed.]
+
 #fn(substring)
 # matches = 0;
 # [try first match and recurse]
@@ -21,7 +24,7 @@
 #while match(window_n, substring)
 #   if not last window
 #       if nothing_memoised
-#           (matches, memoised_substring_lengths) += call fn(window_n+1, substring - [sequence we just consumed, changing new first elem to a .])
+#           (matches, memoised_substring_lengths) += call fn(window_n+1, substring - [sequence we just consumed])
         else
             matches+= memoised_matches where substring <= current substring length
 #   else
