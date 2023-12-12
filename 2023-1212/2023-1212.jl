@@ -18,7 +18,7 @@
 # matches = 0;
 #while match(window_n, substring)
 #   if not last window
-#       matches += call fn(window_n+1, substring - [sequence we just consumed])
+#       matches += call fn(window_n+1, substring - [sequence we just consumed, changing new first elem to a .])
 #   else
 #       matches+=1
 #return matches
