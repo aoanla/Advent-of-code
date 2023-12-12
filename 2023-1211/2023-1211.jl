@@ -23,6 +23,13 @@ end
 #println("$galaxies");
 #make our accumlated distances to avoid quadratic calculations later on [see comment down there]
 #   (I really want to use foldl for this... )
+
+# Note - by recording the number of galaxies in each row and column too [and then accumulating "total above this line"]
+# we can actually do the sum in O(rows+columns) since *every* galaxy above the current row has a sum involving
+# subtracting the current distance for every galaxy in this row... and *every* galaxy below the current row has a sum
+# involving *adding* the current distance for every galaxy in this row 
+# so we can just do both of those for every galaxy in the current row with a multiplication at once!
+
 history_accum(l) = foldl(l; init=[0]) do accum, r
     accum[end] += r;
     push!(accum, accum[end]);
