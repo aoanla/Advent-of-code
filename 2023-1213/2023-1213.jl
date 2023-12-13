@@ -43,8 +43,13 @@ function get_puzzle(d, offset)
 end
 
 function validate(seq, i, fudge) #i is the left-of-the mirror-line, fudge is a fudge factor for number of misses (for part 2)
-    return count_ones(seq[i] ⊻ seq[i+1]) <= fudge;
-    #return ((i>1) && ((i+2) < length(seq))) ? test && count_ones(seq[i-1] ⊻ seq[i+2])<=fudge : test
+    println("I is $i, len(seq) is $(length(seq))");
+    println("$((i>1) && ((i+2) < length(seq)))");
+    test = count_ones(seq[i] ⊻ seq[i+1]) <= fudge;
+    if ((i>1) && ((i+2) < length(seq)))
+        test &= count_ones(seq[i-1] ⊻ seq[i+2])<=fudge;
+    end
+    test #((i>1) && ((i+2) < length(seq))) ? test && count_ones(seq[i-1] ⊻ seq[i+2])<=fudge : test
 end
 
 function find_mirror_sequence(seq, fudge)
@@ -57,8 +62,18 @@ function find_mirror_sequence(seq, fudge)
         count_ones(accum) == fudge && validate(seq, i ÷ 2, fudge) && return i ÷ 2 ; #found sequence starting on the left
         memo[i] = accum ; #memoise for search from right
     end
+    #and from the right
+    #accum = seq[end]
+    #for i in length(seq)-1:-1:4
+    #    accum ⊻= seq[i] ;
+        #println("$(bitstring(accum))      <---- $(bitstring(seq[i]))");
+    #    count_ones(accum) == fudge && validate(seq, (i ÷ 2)-1, fudge) && return length(seq) - (i ÷ 2) ; #found sequence starting on the left
+        #memo[i] = accum ; #memoise for search from right
+    #end
+
     #if here, subseq starts "into" the seq so find the memoised copy matching our final value to find the start
     #println("Scanning memo left:")
+    # I think memoised fudge isn't working
     for i in 1:length(memo)-2  #don't scan the last item as it obviously matches!
         #println("$(bitstring(memo[i]))  -->  $(bitstring(memo[i] ⊻ accum))    <--- $(bitstring(accum))");        
         count_ones(memo[i] ⊻ accum) == fudge && validate(seq,  (length(memo)+i+1) ÷ 2, fudge) && begin 
@@ -79,17 +94,23 @@ function solve(d)
     v_accum = 0;
     v_accum2 = 0;
     while next <= length(d)
-    #    println("Solving puzzle at offset: $next")
+        println("Solving puzzle at offset: $next")
         oldnext = next;
         (next, linelength_, rowbits, colbits) = get_puzzle(d, next);
     #    println("Vertical scan:")
         v = find_mirror_sequence(rowbits, 0);
         v2 = find_mirror_sequence(rowbits, 1); #part 2
     #    println("Horizontal scan")
-        h =  #=(v > 0) ? 0 : =# find_mirror_sequence(colbits, 0); #no need to test v if we already found an h [assuming only 1 mirror per puzzle]
+        h =  find_mirror_sequence(colbits, 0); #
         h2 = find_mirror_sequence(colbits, 1); #part 2
         if (h != 0) & (v != 0)
             println("Error: two mirrors @ \n$(String(d[oldnext:next]))")
+        end
+        if (h == h2) & (v == v2)
+            println("Error: found same values for part 1 and 2 @ \n$(String(d[oldnext:next]))");
+        end
+        if (h2 == 0) & (v2 == 0)
+            println("Error: no alternate soln found @ \n$(String(d[oldnext:next]))");
         end
         h_accum += h;
         v_accum += v;
