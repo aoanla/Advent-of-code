@@ -63,7 +63,7 @@ function find_mirror_sequence(seq, fudge)
         count_ones(accum) == fudge && validate(seq, i ÷ 2, fudge) && return i ÷ 2 ; #found sequence starting on the left
         memo[i] = accum ; #memoise for search from right
     end
-    #and from the right
+    #and from the right (not doing memoisation any more)
     accum = seq[end]
     #println("Length = $(length(seq))");
     for i in length(seq)-1:-1:1
@@ -74,18 +74,6 @@ function find_mirror_sequence(seq, fudge)
         count_ones(accum) == fudge && validate(seq, (length(seq) + i) ÷ 2, fudge) && return (length(seq) + i) ÷ 2  ; #found sequence starting on the left
         #memo[i] = accum ; #memoise for search from right
     end
-
-    #if here, subseq starts "into" the seq so find the memoised copy matching our final value to find the start
-    #println("Scanning memo left:")
-    # I think memoised fudge isn't working
-    #for i in 1:length(memo)-2  #don't scan the last item as it obviously matches!
-        #println("$(bitstring(memo[i]))  -->  $(bitstring(memo[i] ⊻ accum))    <--- $(bitstring(accum))");        
-    #    count_ones(memo[i] ⊻ accum) == fudge && validate(seq,  (length(memo)+i+1) ÷ 2, fudge) && begin 
-    #    println("Match at $i !")
-        #match at i (which is the start) + (l - i +1 ) remaining tiles which add 1/2 -> l/2 + i/2 + 0.5
-    #    return (length(memo) + i + 1) ÷ 2 ; #+1 because we need to include the start cell itself
-    #    end
-    #end
     return 0; #no match
 end
 
@@ -107,6 +95,7 @@ function solve(d)
     #    println("Horizontal scan")
         h =  find_mirror_sequence(colbits, 0); #
         h2 = find_mirror_sequence(colbits, 1); #part 2
+            #remove the "pt1 solution" from the "pt2 set"
         h2 =  h == h2 ? 0 : h2;
         v2 = v == v2 ? 0 : v2;
         if (h != 0) & (v != 0)
@@ -124,7 +113,7 @@ function solve(d)
         if (h == 0) & (v == 0)
             println("Error: no soln found @ \n$(String(d[oldnext:next]))");
         end
-        #remove the "pt1 solution" from the "pt2 set"
+
 
         h_accum += h;
         v_accum += v;
