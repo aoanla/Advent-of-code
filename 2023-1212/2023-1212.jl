@@ -48,7 +48,7 @@
             #push (i) => list_of_match_posns
   #          i+=1
 
-d = read("input3", String); 
+d = read("input", String); 
 
 codes = String[];
 patterns = Array{Int}[];
@@ -95,7 +95,7 @@ function match(windows, substring_start, string)
     #println("Substring start at $i")
     while i == 1 || ( string[i-1] != '#' && i+window_n <= length(string) )#we must not let any #s escape past our sequence
         #match if
-        println("$window_n")
+        #println("$window_n")
         #                   pattern matches # or ?                      and there's . or ? padding          and, if this is the last pattern, there's no # left
         @views  if  all( '.' .!= collect(string[i:i+window_n-1]) ) & (string[i+window_n] != '#') & ( length(windows) > 1 || all('#'.!=collect(string[i+window_n:end])))
             # !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) #state change - we hadn't met a hash in our pattern just ? previously
@@ -110,7 +110,7 @@ function match(windows, substring_start, string)
         end
         i += 1;
     end
-    println("Matches at $match_list");
+    #println("Matches at $match_list");
     #println("Candidates end at: $i");
     filter(items->items.second>0, match_list)
 end
@@ -118,9 +118,9 @@ end
 solve(pc) = sum(values(match(pc[1], 1, pc[2])));
 
 
-#println("$(mapreduce(solve, +, zip(patterns,codes)))");
+println("$(mapreduce(solve, +, zip(patterns,codes)))");
 
-
+#=
 for (p,c) in zip(patterns,codes)
     println("$c : $p")
     println("$(match(p, 1, c))")
