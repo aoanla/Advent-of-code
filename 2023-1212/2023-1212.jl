@@ -91,13 +91,16 @@ function match(windows, substring_start, string)
     i = substring_start;
     window_n = windows[1];
     cache = [];
+    met_hash = false;
     #println("Substring start at $i")
     while i == 1 || ( string[i-1] != '#' && i+window_n <= length(string) )#we must not let any #s escape past our sequence
         #match if
         println("$window_n")
         #                   pattern matches # or ?                      and there's . or ? padding          and, if this is the last pattern, there's no # left
         @views  if  all( '.' .!= collect(string[i:i+window_n-1]) ) & (string[i+window_n] != '#') & ( length(windows) > 1 || all('#'.!=collect(string[i+window_n:end])))
-            if isempty(cache)
+            # !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) #state change - we hadn't met a hash in our pattern just ? previously
+            #                                                             which means we need to regenerate the cache as our restrictions on upstream patterns have changed
+            if isempty(cache) ||  ( !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) )
                 #recurse and fill cache with matches downstream, until there is no downstream
         @views  cache = length(windows) > 1 ? match(windows[2:end], i+window_n+1, string) : Dict([(length(string)+1=>1 )]); 
         #default is a single match *if* we've consumed all the #s in the entire string with our last pattern
