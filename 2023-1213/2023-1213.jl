@@ -42,26 +42,26 @@ function get_puzzle(d, offset)
     return (offset+1, linelength, rowbits, colbits); #+1 on offset to remove the *next* newline?
 end
 
-function validate(seq, i) #i is the left-of-the mirror-line
-    test = seq[i]==seq[i+1];
-    return (i>1) && (i+2) <length(seq) ? test && seq[i-1] == seq[i+2] : test
+function validate(seq, i, fudge) #i is the left-of-the mirror-line, fudge is a fudge factor for number of misses (for part 2)
+    return count_ones(seq[i] ⊻ seq[i+1]) <= fudge;
+    #return ((i>1) && ((i+2) < length(seq))) ? test && count_ones(seq[i-1] ⊻ seq[i+2])<=fudge : test
 end
 
-function find_mirror_sequence(seq)
-    accum = UInt64(0) ; 
+function find_mirror_sequence(seq, fudge)
+    accum = seq[1] ; 
     #println("Starting scan $(bitstring(accum))");
     memo = similar(seq);
-    for i in 1:length(seq)
+    for i in 2:length(seq)
         accum ⊻= seq[i] ;
-    #    println("$(bitstring(accum))      <---- $(bitstring(seq[i]))");
-        accum == 0 && validate(seq, i ÷ 2) && return i ÷ 2 ; #found sequence starting on the left
+        #println("$(bitstring(accum))      <---- $(bitstring(seq[i]))");
+        count_ones(accum) == fudge && validate(seq, i ÷ 2, fudge) && return i ÷ 2 ; #found sequence starting on the left
         memo[i] = accum ; #memoise for search from right
     end
     #if here, subseq starts "into" the seq so find the memoised copy matching our final value to find the start
     #println("Scanning memo left:")
     for i in 1:length(memo)-2  #don't scan the last item as it obviously matches!
-    #    println("$(bitstring(memo[i]))  -->  $(bitstring(memo[i] ⊻ accum))    <--- $(bitstring(accum))");        
-        memo[i] == accum && validate(seq,  (length(memo)+i+1) ÷ 2 ) && begin 
+        #println("$(bitstring(memo[i]))  -->  $(bitstring(memo[i] ⊻ accum))    <--- $(bitstring(accum))");        
+        count_ones(memo[i] ⊻ accum) == fudge && validate(seq,  (length(memo)+i+1) ÷ 2, fudge) && begin 
     #    println("Match at $i !")
         #match at i (which is the start) + (l - i +1 ) remaining tiles which add 1/2 -> l/2 + i/2 + 0.5
         return (length(memo) + i + 1) ÷ 2 ; #+1 because we need to include the start cell itself
@@ -75,24 +75,32 @@ find_any_mirror(sequences) = maximum(find_mirror_sequence.(sequences));
 function solve(d)
     next = 1;  
     h_accum = 0;
+    h_accum2 = 0;
     v_accum = 0;
+    v_accum2 = 0;
     while next <= length(d)
     #    println("Solving puzzle at offset: $next")
         oldnext = next;
         (next, linelength_, rowbits, colbits) = get_puzzle(d, next);
     #    println("Vertical scan:")
-        v = find_mirror_sequence(rowbits);
+        v = find_mirror_sequence(rowbits, 0);
+        v2 = find_mirror_sequence(rowbits, 1); #part 2
     #    println("Horizontal scan")
-        h =  #=(v > 0) ? 0 : =# find_mirror_sequence(colbits); #no need to test v if we already found an h [assuming only 1 mirror per puzzle]
+        h =  #=(v > 0) ? 0 : =# find_mirror_sequence(colbits, 0); #no need to test v if we already found an h [assuming only 1 mirror per puzzle]
+        h2 = find_mirror_sequence(colbits, 1); #part 2
         if (h != 0) & (v != 0)
             println("Error: two mirrors @ \n$(String(d[oldnext:next]))")
         end
         h_accum += h;
         v_accum += v;
-        println("$v, $h")
+        h_accum2 += h2;
+        v_accum2 += v2;
+        println("$v, $h");
+        println("$v2, $h2");
     end
 
-    (v_accum * 100 +  h_accum)
+    (v_accum * 100 +  h_accum, v_accum2*100 + h_accum2)
+
 end
 
 println("$(solve(d))");
