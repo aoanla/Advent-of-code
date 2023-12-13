@@ -50,20 +50,21 @@
 
 d = read("input", String); 
 
+rawcodes = String[];
 codes = String[];
 patterns = Array{Int}[];
 
 function parse_line(line)
     (code, windows) = split(line, ' ');
-    code = code * "."; #extra dot padding to make the window matching work
-    (code, parse.(Int, (split(windows, ',')) ) ) 
+    code1 = code * "."; #extra dot padding to make the window matching work
+    (code, code1, parse.(Int, (split(windows, ',')) ) ) 
 end
 
 for line in split(d, '\n')
     if length(line) < 2
         break;
     end
-    push!.((codes,patterns), parse_line(line) ) ; 
+    push!.((rawcodes,codes,patterns), parse_line(line) ) ; 
 end
 
 println("$(codes[1])")
@@ -118,7 +119,22 @@ end
 solve(pc) = sum(values(match(pc[1], 1, pc[2])));
 
 
-println("$(mapreduce(solve, +, zip(patterns,codes)))");
+println("$(mapreduce((x)->solve(x)^5, +, zip(patterns,codes)))");
+
+
+#part 2 - lets hope our memoisation is fast enough!
+
+#it isn't - we're going to need to interleave these with the pt1 examples and use the memoisations from the previous versions
+# we *can't* just blindly raise the combinations to the power 5, because for some examples, the extra ? might allow a degree of freedom...
+# (although, yes, most of the cases will be covered by that, which is why the caches are useful)
+#but = for later!
+
+pt2patterns = repeat.(patterns, 5);
+println("$(patterns[1])  => $(pt2patterns[1])");
+pt2codes = repeat.(rawcodes .* "A", 5)[begin:end-1];  #remove the final ?
+println("$(rawcodes[1]) => $(pt2codes[1])");
+
+#println("$(mapreduce(solve, +, zip(pt2patterns,pt2codes)))");
 
 #=
 for (p,c) in zip(patterns,codes)
