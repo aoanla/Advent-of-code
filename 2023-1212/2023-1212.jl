@@ -48,23 +48,70 @@
             #push (i) => list_of_match_posns
   #          i+=1
 
-d = read("input", String); 
+d = read("input3", String); 
 
-codes = Array{String}();
-patterns = Array{Array{Int8}}();
+codes = String[];
+patterns = Array{Int}[];
 
 function parse_line(line)
     (code, windows) = split(line, ' ');
-    (code, parse.(Int8, (split(windows, ',')) ) ) 
+    code = code * "."; #extra dot padding to make the window matching work
+    (code, parse.(Int, (split(windows, ',')) ) ) 
 end
 
 for line in split(d, '\n')
-@views   push!((codes,patterns), parse_line(line) ) ; 
+    if length(line) < 2
+        break;
+    end
+    push!.((codes,patterns), parse_line(line) ) ; 
 end
 
+println("$(codes[1])")
+println("$(patterns[1])")
 
 #memoisation unit - length of substring needed for this submatch, number of matches in it
 struct sub_match
     length::Int
     matches::Int
 end
+
+function match(windows, substring_start, string)
+    matches = 0;
+    match_list = Dict{Int, Int}();
+    i = substring_start;
+    window_n = windows[1];
+    cache = [];
+    #println("Substring start at $i")
+    while i == 1 || ( string[i-1] != '#' && i+window_n <= length(string) )#we must not let any #s escape past our sequence
+        #match if
+        println("$window_n")
+        #                   pattern matches # or ?                      and there's . or ? padding          and, if this is the last pattern, there's no # left
+        @views  if  all( '.' .!= collect(string[i:i+window_n-1]) ) & (string[i+window_n] != '#') & ( length(windows) > 1 || all('#'.!=collect(string[i+window_n:end])))
+            if isempty(cache)
+                #recurse and fill cache with matches downstream, until there is no downstream
+        @views  cache = length(windows) > 1 ? match(windows[2:end], i+window_n+1, string) : Dict([(length(string)+1=>1 )]); 
+        #default is a single match *if* we've consumed all the #s in the entire string with our last pattern
+            end
+            #sum the cached elements compatible with our current "end string position" for our accrued matches recursed
+            match_list[i] = sum(values(filter(items->items.first>i+window_n, cache)));
+        end
+        i += 1;
+    end
+    println("Matches at $match_list");
+    #println("Candidates end at: $i");
+    filter(items->items.second>0, match_list)
+end
+
+solve(pc) = sum(values(match(pc[1], 1, pc[2])));
+
+
+#println("$(mapreduce(solve, +, zip(patterns,codes)))");
+
+
+for (p,c) in zip(patterns,codes)
+    println("$c : $p")
+    println("$(match(p, 1, c))")
+#    println("$(sum(values(match(p, 1, c))))");
+#    println("$(solve((p=>c)))");
+end
+#==#
