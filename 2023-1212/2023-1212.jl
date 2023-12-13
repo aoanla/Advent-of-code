@@ -75,6 +75,16 @@ struct sub_match
     matches::Int
 end
 
+#BUG:
+# currently:
+# ??#.???????#??#??.. 1,1,9
+# window 1 matches on first ?
+# so entire cache matches just on the one solution for that - which needs 2 to match on first # (on posn 3)
+# (so we miss the solution where 1 matches at posn 3, allowing 2 to match the start of the second set of ?s )
+
+#so, we need to be able to "re-call" the recursed functions to add more options - *if* we change the sets of # (and only #, not ?) we consume
+
+
 function match(windows, substring_start, string)
     matches = 0;
     match_list = Dict{Int, Int}();
