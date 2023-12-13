@@ -56,6 +56,7 @@ function find_mirror_sequence(seq, fudge)
     accum = seq[1] ; 
     #println("Starting scan $(bitstring(accum))");
     memo = similar(seq);
+    memo[1] = accum;
     for i in 2:length(seq)
         accum ⊻= seq[i] ;
         #println("$(bitstring(accum))      <---- $(bitstring(seq[i]))");
