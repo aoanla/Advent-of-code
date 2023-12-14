@@ -1,7 +1,7 @@
 
-#part 1
+#part 1 - fancy "don't actually move anything" version
 
-open("input2") do f
+open("input") do f
     data = readlines(f);
     linenum = length(data);
     next_row_to_fill = fill(linenum, length(data[begin])) ; #our counter of next O values (starting from linenum)
@@ -32,7 +32,7 @@ function get_data(f)
     reduce(hcat, collect.(data))
 end
 
-data = get_data("input2");
+data = get_data("input");
 
 """ shift!(array, axis, rev)
     "shifts" Os in the 2d array along axis as if tilted to slide them in that direction
@@ -58,18 +58,15 @@ function shift!(data, axis, rev)
         next_row_to_fill[Os] .+= step; # each to increment this
         linenum += step;
         next_row_to_fill[Hs] .= linenum # '#' set the next row for their col to the one after them via selector 
-        #println("$next_row_to_fill");
     end
-    #    next_row_to_fill = fill(linenum, length(data[begin])) ; #our counter of next O values (starting from linenum)
-    #    Orows = 0;
 end
 
- get_load(data) =  mapreduce(  x->x[1]*count(==('O'), x[2]) , + ,  enumerate(reverse(eachslice(data,dims=2)))  ) ;
+get_load(data) =  mapreduce(  x->x[1]*count(==('O'), x[2]) , + ,  enumerate(reverse(eachslice(data,dims=2)))  ) ;
 
+#pt 1 if you wanted to do it
 #shift!(data, 2, false);
 #println("$(get_load(data))"); #hopefully == 136 ? 
 
-#exit() #exit here for testing purposes
 
 function spin_cycle!(data)
     shift!(data, 2, false); #N  #assuming 2 is the right axis that I'm thinking of...
@@ -78,17 +75,14 @@ function spin_cycle!(data)
     shift!(data, 1, true)  #E
 end
 
-function detect_change(data, cycles)
-    olddata = deepcopy(data)
-    for i in 1:cycles
-        spin_cycle!(data);
-    end
-    changes = olddata .== data
-    count(changes)
-end
 
-#probably better just to store a hash? Why not just hash by the value we're searching for? Because I don't think it's a big enough number to be a good hash, so... lets have two lists
-function find_cycles(data)
+#we're using a hash different to just the load because I'm not convinced the load is a good hash in itself (it's probably fine to use it but I am paranoid)
+""" find_cycles!(data)
+        (destructively) performs the spin_cycle operation (shift! with N, W, S, E directions in sequence) until it detects a cycle in the pattern of results
+        returns ( list_of_hashes_generated, list_of_loads_generated, element_where_cycle_starts, length_of_cycle)
+        get_hash_at can then be used to get the hash or load index for a given iteration, greater than cycle_start
+"""
+function find_cycles!(data)
     hashes = [hash(data)];  #assume hash here just calculates the "load" value
     loads = [get_load(data)]
     cyclestart = nothing
@@ -104,7 +98,7 @@ function find_cycles(data)
     (hashes, loads,cyclestart, cycleduration)
 end
 
-(hashes, loads,cyclestart, cycleduration) = find_cycles(data);
+(hashes, loads,cyclestart, cycleduration) = find_cycles!(data);
 
 # Nth cycle at hash position N+1 due to Julia indexing
                 #        loop position                   #and offset into loop
@@ -112,4 +106,3 @@ get_hash_at(x) = ( (x + 1 - cyclestart) % cycleduration ) + cyclestart;
 
 #the answer!
 println("$(loads[get_hash_at(1000000000)])");
-#try some lagged cycle testing I guess
