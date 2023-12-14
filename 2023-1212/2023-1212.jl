@@ -86,8 +86,11 @@ end
 #so, we need to be able to "re-call" the recursed functions to add more options - *if* we change the sets of # (and only #, not ?) we consume
 
 #need public shared cache for pt2 - maps pairs of Substring patterns and the remaining windows => number of solutions for that 
-cache = Dict{(String,Vector{Int}), Int}
+pubcache = Dict{(String,Vector{Int}), Int}
 
+trim(str) = startswith(str, "..") ? "." * lstrip(str, '.') : str; 
+make_subkey(string, i, w) = (trim(string[i+w[1]:end]), w[2:end]) ; #?? - 
+make_key(string, i, w) = (string[i:end], w[begin:end]);
 #do we need an equality rule that ignores leading .? (since they don't matter for the substring if they're in the way)?
 
 #you know, the above is probably *solved* if we do better memoisation needed for part 2 (and memoise the pattern sequence not just the length) without needing the cache invalidation
@@ -101,14 +104,24 @@ function match(windows, substring_start, string)
     met_hash = false;
     #println("Substring start at $i")
     while i == 1 || ( string[i-1] != '#' && i+window_n <= length(string) )#we must not let any #s escape past our sequence
-        #match if
+        #MATCH if
         #println("$window_n")
         #                   pattern matches # or ?                      and there's . or ? padding          and, if this is the last pattern, there's no # left
         @views  if  all( '.' .!= collect(string[i:i+window_n-1]) ) & (string[i+window_n] != '#') & ( length(windows) > 1 || all('#'.!=collect(string[i+window_n:end])))
             # !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) #state change - we hadn't met a hash in our pattern just ? previously
-            #                                                             which means we need to regenerate the cache as our restrictions on upstream patterns have changed
-            if isempty(cache) ||  ( !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) )
+            #               which means we need to regenerate the cache as our restrictions on upstream patterns have changed
+            cache_key = make_key(string, i, w);
+            if length(windows) == 1 && !has_key(pubcache, cache_key) 
+                    pubcache[cache_key] == 1; #only one match possible for us with the last window, no need to check cache?
+            else
+                ss =  
+                kk = make_subkey(string, i, windows);
+                if !haskey(pubcache, kk )
+                    match()
+            #if isempty(cache) ||  ( !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) )
                 #recurse and fill cache with matches downstream, until there is no downstream
+                
+                pubcache[kk] = num_matches ; #where is num_matches from... 
         @views  cache = length(windows) > 1 ? match(windows[2:end], i+window_n+1, string) : Dict([(length(string)+1=>1 )]); 
         #default is a single match *if* we've consumed all the #s in the entire string with our last pattern
             end
