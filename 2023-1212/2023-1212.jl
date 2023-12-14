@@ -129,6 +129,10 @@ println("$(mapreduce((x)->solve(x)^5, +, zip(patterns,codes)))");
 # (although, yes, most of the cases will be covered by that, which is why the caches are useful)
 #but = for later!
 
+#further note - it's actually probably necessary to do the dynamic programming thing here and attack from both directions to catch all possibilities
+# (this was already implied by part 1 - where I fudged it by requiring the last match should not have any # to the right of it, but it
+#  "should" be done by moving in from the left and right "simultaneously" and matching up in the middle)
+
 pt2patterns = repeat.(patterns, 5);
 println("$(patterns[1])  => $(pt2patterns[1])");
 pt2codes = repeat.(rawcodes .* "A", 5)[begin:end-1];  #remove the final ?
