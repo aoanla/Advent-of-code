@@ -1,7 +1,7 @@
 
 #part 1
 
-open("input") do f
+open("input2") do f
     data = readlines(f);
     linenum = length(data);
     next_row_to_fill = fill(linenum, length(data[begin])) ; #our counter of next O values (starting from linenum)
@@ -40,10 +40,10 @@ data = get_data("input2");
 """
 function shift!(data, axis, rev)
     other_axis = 3 - axis; #2->1, 1->2
-    a_axes = axes(a);
-    linenum = a_axes[axis][rev ? end : begin];
-    next_row_to_fill = fill( linenum , a_axes[other_axis]);
-    iter = rev ? reverse(eachslice(a, dims=axis)) : eachslice(a, dims=axis);
+    d_axes = axes(data);
+    linenum = d_axes[axis][rev ? end : begin];
+    next_row_to_fill = fill( linenum , d_axes[other_axis]);
+    iter = rev ? reverse(eachslice(data, dims=axis)) : eachslice(data, dims=axis);
     step = 1 - 2*rev; #rev ? -1 : 1; but branchless
 
     for ll in iter
@@ -64,18 +64,18 @@ function shift!(data, axis, rev)
     #    Orows = 0;
 end
 
- get_load(data) =  mapreduce(  x->x[1]*count(==('O'), x[2]) , + ,  enumerate(reverse(eachslice(data,dims=1)))  ) ;
+ get_load(data) =  mapreduce(  x->x[1]*count(==('O'), x[2]) , + ,  enumerate(reverse(eachslice(data,dims=2)))  ) ;
 
-shift!(data, 1, false);
-println("$(get_load(data))"); #hopefully == 136 ? 
+#shift!(data, 2, false);
+#println("$(get_load(data))"); #hopefully == 136 ? 
 
-exit() #exit here for testing purposes
+#exit() #exit here for testing purposes
 
 function spin_cycle!(data)
-    shift!(data, 1, false); #N  #assuming 1 is the right axis that I'm thinking of...
-    shift!(data, 2, false)  #W
-    shift!(data, 1, true)  #S
-    shift!(data, 2, true)  #E
+    shift!(data, 2, false); #N  #assuming 2 is the right axis that I'm thinking of...
+    shift!(data, 1, false)  #W
+    shift!(data, 2, true)  #S
+    shift!(data, 1, true)  #E
 end
 
 function detect_change(data, cycles)
@@ -88,23 +88,28 @@ function detect_change(data, cycles)
 end
 
 #probably better just to store a hash? Why not just hash by the value we're searching for? Because I don't think it's a big enough number to be a good hash, so... lets have two lists
-
-hashes = [hash(data)];  #assume hash here just calculates the "load" value
-loads = [get_load(data)]
-cyclestart = nothing
-while isnothing(cyclestart)
-    spin_cycle!(data);
-    newhash = hash(data);
-    cyclestart = findfirst(==(newhash), hashes);
-    push(hashes, newhash);
-    push(loads, load(data));
+function find_cycles(data)
+    hashes = [hash(data)];  #assume hash here just calculates the "load" value
+    loads = [get_load(data)]
+    cyclestart = nothing
+    while isnothing(cyclestart)
+        spin_cycle!(data);
+        newhash = hash(data);
+        cyclestart = findfirst(==(newhash), hashes);
+        push!(hashes, newhash);
+        push!(loads, get_load(data));
+    end
+    cycleduration = length(hashes) - cyclestart;
+    println("Found cycle, starts at offset: $cyclestart , duration $cycleduration");
+    (hashes, loads,cyclestart, cycleduration)
 end
-cycleduration = length(hashes) - cyclestart;
+
+(hashes, loads,cyclestart, cycleduration) = find_cycles(data);
 
 # Nth cycle at hash position N+1 due to Julia indexing
                 #        loop position                   #and offset into loop
 get_hash_at(x) = ( (x + 1 - cyclestart) % cycleduration ) + cyclestart;  
 
 #the answer!
-loads[get_hash_at(1000000000)];
+println("$(loads[get_hash_at(1000000000)])");
 #try some lagged cycle testing I guess
