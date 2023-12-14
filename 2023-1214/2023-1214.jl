@@ -34,21 +34,27 @@ end
 
 data = get_data("input2");
 
-
+""" shift!(array, axis, rev)
+    "shifts" Os in the 2d array along axis as if tilted to slide them in that direction
+        rev reverses direction of sliding (defaults to sliding "up" to lower indices)
+"""
 function shift!(data, axis, rev)
-    next_row_to_fill = fill(??, )
+    other_axis = 3 - axis; #2->1, 1->2
+    a_axes = axes(a);
+    linenum = a_axes[axis][rev ? end : begin];
+    next_row_to_fill = fill( linenum , a_axes[other_axis]);
     iter = rev ? reverse(eachslice(a, dims=axis)) : eachslice(a, dims=axis);
-    other_axis = 3 - axis;
+    step = 1 - 2*rev; #rev ? -1 : 1; but branchless
+
     for ll in iter
         #   so - for each line, the "final position" of a O is either: the (final position of the previous O in that col) - 1, or the (last # in the col)-1 whichever happened last    
         Os =  'O' .== ll ;  #<-- selector used for summing Os and also decrementing next row to fill [we're counting down from the top]
-        Hs = '#' .== ll;
-    #  not needed - #'s donot move  put a '#' in each Hs position in the current row 
+        Hs = '#' .== ll; 
     # zero out the 'O's in the current row [so they can be filled by the next step]
-      ll[Os] .= '.';
+        ll[Os] .= '.';
     # put an 'O' in each next_row_to_fill[Os] ; - need to select the same "perp-to-axis" index as Os and Os value in the axis direction
     #need to select only the "cols" in data we want to set... 
-    setindex!.(eachslice(data, dims=other_axis)[Os], 'O', next_row_to_fill[Os]);
+        setindex!.(eachslice(data, dims=other_axis)[Os], 'O', next_row_to_fill[Os]);
         next_row_to_fill[Os] .+= step; # each to increment this
         linenum += step;
         next_row_to_fill[Hs] .= linenum # '#' set the next row for their col to the one after them via selector 
@@ -58,18 +64,18 @@ function shift!(data, axis, rev)
     #    Orows = 0;
 end
 
-function get_load(data)
-    #sum down the rows as in part 1
+ get_load(data) =  mapreduce(  x->x[1]*count(==('O'), x[2]) , + ,  enumerate(reverse(eachslice(data,dims=1)))  ) ;
 
-    load
-end
+shift!(data, 1, false);
+println("$(get_load(data))"); #hopefully == 136 ? 
 
+exit() #exit here for testing purposes
 
 function spin_cycle!(data)
-    shift!(data, NORTH)
-    shift!(data, WEST)
-    shift!(data, SOUTH)
-    shift!(data, EAST)
+    shift!(data, 1, false); #N  #assuming 1 is the right axis that I'm thinking of...
+    shift!(data, 2, false)  #W
+    shift!(data, 1, true)  #S
+    shift!(data, 2, true)  #E
 end
 
 function detect_change(data, cycles)
@@ -84,7 +90,7 @@ end
 #probably better just to store a hash? Why not just hash by the value we're searching for? Because I don't think it's a big enough number to be a good hash, so... lets have two lists
 
 hashes = [hash(data)];  #assume hash here just calculates the "load" value
-loads = [load(data)]
+loads = [get_load(data)]
 cyclestart = nothing
 while isnothing(cyclestart)
     spin_cycle!(data);
