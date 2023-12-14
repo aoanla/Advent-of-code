@@ -119,7 +119,7 @@ end
 solve(pc) = sum(values(match(pc[1], 1, pc[2])));
 
 
-println("$(mapreduce((x)->solve(x)^5, +, zip(patterns,codes)))");
+println("$(mapreduce((x)->solve(x), +, zip(patterns,codes)))");
 
 
 #part 2 - lets hope our memoisation is fast enough!
@@ -128,6 +128,10 @@ println("$(mapreduce((x)->solve(x)^5, +, zip(patterns,codes)))");
 # we *can't* just blindly raise the combinations to the power 5, because for some examples, the extra ? might allow a degree of freedom...
 # (although, yes, most of the cases will be covered by that, which is why the caches are useful)
 #but = for later!
+
+# I think we actually need to memoise over the entire set of puzzles - and do better memoisation in that case (associate result with actual pattern fragment)
+# rather than just offset counts 
+
 
 #further note - it's actually probably necessary to do the dynamic programming thing here and attack from both directions to catch all possibilities
 # (this was already implied by part 1 - where I fudged it by requiring the last match should not have any # to the right of it, but it
