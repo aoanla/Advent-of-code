@@ -67,37 +67,18 @@ for line in split(d, '\n')
     push!.((rawcodes,codes,patterns), parse_line(line) ) ; 
 end
 
-#println("$(codes[1])")
-#println("$(patterns[1])")
-
-#memoisation unit - length of substring needed for this submatch, number of matches in it
-struct sub_match
-    length::Int
-    matches::Int
-end
-
-#BUG:
-# currently:
-# ??#.???????#??#??.. 1,1,9
-# window 1 matches on first ?
-# so entire cache matches just on the one solution for that - which needs 2 to match on first # (on posn 3)
-# (so we miss the solution where 1 matches at posn 3, allowing 2 to match the start of the second set of ?s )
-
-#so, we need to be able to "re-call" the recursed functions to add more options - *if* we change the sets of # (and only #, not ?) we consume
-
 #need public shared cache for pt2 - maps pairs of Substring patterns and the remaining windows => number of solutions for that 
 pubcache = Dict{Tuple{String,Vector{Int}}, Int}();
 
 trim(str) = startswith(str, "..") ? "." * lstrip(str, '.') : str; 
-make_subkey(string, i, w) = (trim(string[i+w[1]:end]), w[2:end]) ; #?? - 
-make_key(string, i, w) = (string[i:end], w[begin:end]);
+
 #do we need an equality rule that ignores leading .? (since they don't matter for the substring if they're in the way)?
 
 #you know, the above is probably *solved* if we do better memoisation needed for part 2 (and memoise the pattern sequence not just the length) without needing the cache invalidation
 
 
 function match(windows, string)
-    println("in Match: $windows, $string");
+    #println("in Match: $windows, $string");
     ss = trim(string);
     length(ss) == 1 && return 0; #early return for reaching the "fake" ending .
     #if key((trim(substring), windows) is in the cache, return the cached values - can happen hypothetically?
@@ -134,7 +115,7 @@ end
 #println("$(match([5,1,1], "?.???????.????..."))")
 
 solve(pc) = begin
-    println("$(pc[2]) $(pc[1])");
+    #println("$(pc[2]) $(pc[1])");
     sum(values(match(pc[1], pc[2])))
 end
 
@@ -142,26 +123,14 @@ println("$(mapreduce((x)->solve(x), +, zip(patterns,codes)))");
 
 #part 2 - lets hope our memoisation is fast enough!
 
-#it isn't - we're going to need to interleave these with the pt1 examples and use the memoisations from the previous versions
-# we *can't* just blindly raise the combinations to the power 5, because for some examples, the extra ? might allow a degree of freedom...
-# (although, yes, most of the cases will be covered by that, which is why the caches are useful)
-#but = for later!
-
-# I think we actually need to memoise over the entire set of puzzles - and do better memoisation in that case (associate result with actual pattern fragment)
-# rather than just offset counts 
-
-
-#further note - it's actually probably necessary to do the dynamic programming thing here and attack from both directions to catch all possibilities
-# (this was already implied by part 1 - where I fudged it by requiring the last match should not have any # to the right of it, but it
-#  "should" be done by moving in from the left and right "simultaneously" and matching up in the middle)
 
 pt2patterns = repeat.(patterns, 5);
-println("$(patterns[1])  => $(pt2patterns[1])");
+#println("$(patterns[1])  => $(pt2patterns[1])");
 
 repstr(x) = repeat(x * "?",5)[begin:end-1] * ".";
 
 pt2codes = repstr.(rawcodes) ; #(repeat.(rawcodes .* "?", 5)) ;  #remove the final ?
-println("$(rawcodes[1]) => $(pt2codes[1])");
+#println("$(rawcodes[1]) => $(pt2codes[1])");
 
 println("$(mapreduce(solve, +, zip(pt2patterns,pt2codes)))");
 
