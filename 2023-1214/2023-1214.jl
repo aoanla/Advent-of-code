@@ -16,7 +16,7 @@ open("input") do f
         next_row_to_fill[Os] .-= 1; # each to increment this
         linenum -= 1;
         next_row_to_fill[Hs] .= linenum # '#' set the next row for their col to the one after them via selector
-        println("$next_row_to_fill");
+        #println("$next_row_to_fill");
     end
 
     println("$Orows");
