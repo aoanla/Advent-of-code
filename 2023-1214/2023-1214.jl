@@ -55,6 +55,13 @@ function shift!(data, axis, step)
     #    Orows = 0;
 end
 
+function get_load(data)
+    #sum down the rows as in part 1
+
+    load
+end
+
+
 function spin_cycle!(data)
     shift!(data, NORTH)
     shift!(data, WEST)
@@ -71,4 +78,24 @@ function detect_change(data, cycles)
     count(changes)
 end
 
+#probably better just to store a hash? Why not just hash by the value we're searching for? Because I don't think it's a big enough number to be a good hash, so... lets have two lists
+
+hashes = [hash(data)];  #assume hash here just calculates the "load" value
+loads = [load(data)]
+cyclestart = nothing
+while isnothing(cyclestart)
+    spin_cycle!(data);
+    newhash = hash(data);
+    cyclestart = findfirst(==(newhash), hashes);
+    push(hashes, newhash);
+    push(loads, load(data));
+end
+cycleduration = length(hashes) - cyclestart;
+
+# Nth cycle at hash position N+1 due to Julia indexing
+                #        loop position                   #and offset into loop
+get_hash_at(x) = ( (x + 1 - cyclestart) % cycleduration ) + cyclestart;  
+
+#the answer!
+loads[get_hash_at(1000000000)];
 #try some lagged cycle testing I guess
