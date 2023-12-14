@@ -85,6 +85,11 @@ end
 
 #so, we need to be able to "re-call" the recursed functions to add more options - *if* we change the sets of # (and only #, not ?) we consume
 
+#need public shared cache for pt2
+cache = HashMap (? -> number of solns)
+
+
+#you know, the above is probably *solved* if we do better memoisation needed for part 2 (and memoise the pattern sequence not just the length) without needing the cache invalidation
 
 function match(windows, substring_start, string)
     matches = 0;
