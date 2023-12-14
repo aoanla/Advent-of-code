@@ -35,17 +35,20 @@ end
 data = get_data("input2");
 
 
-function shift!(data, axis, step)
-    next_row_to_fill = fill( begin or end based on direction, (size perp to iteration axis))
-    for ll in data iterate across axis in direction 
+function shift!(data, axis, rev)
+    next_row_to_fill = fill(??, )
+    iter = rev ? reverse(eachslice(a, dims=axis)) : eachslice(a, dims=axis);
+    other_axis = 3 - axis;
+    for ll in iter
         #   so - for each line, the "final position" of a O is either: the (final position of the previous O in that col) - 1, or the (last # in the col)-1 whichever happened last    
         Os =  'O' .== ll ;  #<-- selector used for summing Os and also decrementing next row to fill [we're counting down from the top]
         Hs = '#' .== ll;
     #  not needed - #'s donot move  put a '#' in each Hs position in the current row 
     # zero out the 'O's in the current row [so they can be filled by the next step]
-      ll[Os] .= '.''
-    # put an 'O' in each next_row_to_fill[Os] ; 
-      ??
+      ll[Os] .= '.';
+    # put an 'O' in each next_row_to_fill[Os] ; - need to select the same "perp-to-axis" index as Os and Os value in the axis direction
+    #need to select only the "cols" in data we want to set... 
+    setindex!.(eachslice(data, dims=other_axis)[Os], 'O', next_row_to_fill[Os]);
         next_row_to_fill[Os] .+= step; # each to increment this
         linenum += step;
         next_row_to_fill[Hs] .= linenum # '#' set the next row for their col to the one after them via selector 
