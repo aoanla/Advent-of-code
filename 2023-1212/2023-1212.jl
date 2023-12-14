@@ -67,8 +67,8 @@ for line in split(d, '\n')
     push!.((rawcodes,codes,patterns), parse_line(line) ) ; 
 end
 
-println("$(codes[1])")
-println("$(patterns[1])")
+#println("$(codes[1])")
+#println("$(patterns[1])")
 
 #memoisation unit - length of substring needed for this submatch, number of matches in it
 struct sub_match
@@ -86,7 +86,7 @@ end
 #so, we need to be able to "re-call" the recursed functions to add more options - *if* we change the sets of # (and only #, not ?) we consume
 
 #need public shared cache for pt2 - maps pairs of Substring patterns and the remaining windows => number of solutions for that 
-pubcache = Dict{(String,Vector{Int}), Int}
+pubcache = Dict{Tuple{String,Vector{Int}}, Int}();
 
 trim(str) = startswith(str, "..") ? "." * lstrip(str, '.') : str; 
 make_subkey(string, i, w) = (trim(string[i+w[1]:end]), w[2:end]) ; #?? - 
@@ -95,51 +95,50 @@ make_key(string, i, w) = (string[i:end], w[begin:end]);
 
 #you know, the above is probably *solved* if we do better memoisation needed for part 2 (and memoise the pattern sequence not just the length) without needing the cache invalidation
 
-function match(windows, substring_start, string)
+
+function match(windows, string)
+    println("in Match: $windows, $string");
+    ss = trim(string);
+    length(ss) == 1 && return 0; #early return for reaching the "fake" ending .
+    #if key((trim(substring), windows) is in the cache, return the cached values - can happen hypothetically?
+    k = (ss, windows[begin:end]);
+    haskey(pubcache, k) && return pubcache[k] ;
+    window_width = sum(windows);
+    max_i = length(string) - window_width - length(windows) + 1; #don't iterate so far that you run out of room for the windows 
     matches = 0;
-    match_list = Dict{Int, Int}();
-    i = substring_start;
-    window_n = windows[1];
-    cache = [];
-    met_hash = false;
-    #println("Substring start at $i")
-    while i == 1 || ( string[i-1] != '#' && i+window_n <= length(string) )#we must not let any #s escape past our sequence
-        #MATCH if
-        #println("$window_n")
-        #                   pattern matches # or ?                      and there's . or ? padding          and, if this is the last pattern, there's no # left
-        @views  if  all( '.' .!= collect(string[i:i+window_n-1]) ) & (string[i+window_n] != '#') & ( length(windows) > 1 || all('#'.!=collect(string[i+window_n:end])))
-            # !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) #state change - we hadn't met a hash in our pattern just ? previously
-            #               which means we need to regenerate the cache as our restrictions on upstream patterns have changed
-            cache_key = make_key(string, i, w);
-            if length(windows) == 1 && !has_key(pubcache, cache_key) 
-                    pubcache[cache_key] == 1; #only one match possible for us with the last window, no need to check cache?
-            else
-                ss =  
-                kk = make_subkey(string, i, windows);
-                if !haskey(pubcache, kk )
-                    match()
-            #if isempty(cache) ||  ( !met_hash && any('#' .== collect(string[i:i+window_n-1]) ) )
-                #recurse and fill cache with matches downstream, until there is no downstream
-                
-                pubcache[kk] = num_matches ; #where is num_matches from... 
-        @views  cache = length(windows) > 1 ? match(windows[2:end], i+window_n+1, string) : Dict([(length(string)+1=>1 )]); 
-        #default is a single match *if* we've consumed all the #s in the entire string with our last pattern
+    i = 1;
+
+    #set matches = 0;
+    #else, try to find a match for the first window, iterating through the substring, without letting a # escape and leaving enough room for the rest of the windows
+    while i <= max_i  && ( i == 1 || ( string[i-1] != '#' ) )  
+        #match first window
+        #                   pattern matches # or ?                      and there's . or ? padding          
+@views  if  all( '.' .!= collect(string[i:i+windows[1]-1]) ) & (string[i+windows[1]] != '#')
+            # is length(window) == 1 and we've consumed all the hashes - so this *is* a valid match
+            if length(windows) == 1
+                matches += all('#'.!=collect(string[i+windows[1]:end])); #using true as 1
+            else 
+                sss = trim(string[i+windows[1]+1:end]);
+                kk = (sss, windows[2:end])  
+            # is (trim(rest_of_substring), windows[2:end]) in the cache, if not do the work
+                matches += haskey(pubcache, kk) ? pubcache[kk] : match(windows[2:end], sss);
             end
-            #sum the cached elements compatible with our current "end string position" for our accrued matches recursed
-            match_list[i] = sum(values(filter(items->items.first>i+window_n, cache)));
         end
-        i += 1;
+        i+=1
     end
-    #println("Matches at $match_list");
-    #println("Candidates end at: $i");
-    filter(items->items.second>0, match_list)
+    pubcache[k] = matches;
+    matches
 end
 
-solve(pc) = sum(values(match(pc[1], 1, pc[2])));
+# ?.???????.????.. [5, 1, 1] problematic
+#println("$(match([5,1,1], "?.???????.????..."))")
 
+solve(pc) = begin
+    println("$(pc[2]) $(pc[1])");
+    sum(values(match(pc[1], pc[2])))
+end
 
 println("$(mapreduce((x)->solve(x), +, zip(patterns,codes)))");
-
 
 #part 2 - lets hope our memoisation is fast enough!
 
@@ -158,10 +157,13 @@ println("$(mapreduce((x)->solve(x), +, zip(patterns,codes)))");
 
 pt2patterns = repeat.(patterns, 5);
 println("$(patterns[1])  => $(pt2patterns[1])");
-pt2codes = repeat.(rawcodes .* "A", 5)[begin:end-1];  #remove the final ?
+
+repstr(x) = repeat(x * "?",5)[begin:end-1] * ".";
+
+pt2codes = repstr.(rawcodes) ; #(repeat.(rawcodes .* "?", 5)) ;  #remove the final ?
 println("$(rawcodes[1]) => $(pt2codes[1])");
 
-#println("$(mapreduce(solve, +, zip(pt2patterns,pt2codes)))");
+println("$(mapreduce(solve, +, zip(pt2patterns,pt2codes)))");
 
 #=
 for (p,c) in zip(patterns,codes)
@@ -170,4 +172,4 @@ for (p,c) in zip(patterns,codes)
 #    println("$(sum(values(match(p, 1, c))))");
 #    println("$(solve((p=>c)))");
 end
-#==#
+=#
