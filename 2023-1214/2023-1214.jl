@@ -19,3 +19,5 @@ open("input") do f
 
     println("$Orows");
 end
+
+#for part 2, we obviously need to find the cycles that get "stuck" so we can skip ahead
