@@ -29,17 +29,12 @@ end
 # subtracting the current distance for every galaxy in this row... and *every* galaxy below the current row has a sum
 # involving *adding* the current distance for every galaxy in this row 
 # so we can just do both of those for every galaxy in the current row with a multiplication at once!
-
-history_accum(l) = foldl(l; init=[0]) do accum, r
-    accum[end] += r;
-    push!(accum, accum[end]);
-    accum
-end
-
-dist_rows = history_accum(bigrows);
-dist_cols = history_accum(bigcols);
-dist_cols2 = history_accum(bigcols2);
-dist_rows2 = history_accum(bigrows2);
+ 
+#made this better using builtins I remembered later... (previously I wrote my own accumulating sum)
+dist_rows = cumsum(bigrows);
+dist_cols = cumsum(bigcols);
+dist_cols2 = cumsum(bigcols2);
+dist_rows2 = cumsum(bigrows2);
 
 numgs = length(galaxies);
 #pair distances

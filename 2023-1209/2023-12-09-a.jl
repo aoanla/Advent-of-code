@@ -2,7 +2,7 @@
 using Printf
 using BenchmarkTools
 
-
+#note - julia actually has a "diff" method on iterables which trivially solves this but that would be cheating ;)
 
 
 """
