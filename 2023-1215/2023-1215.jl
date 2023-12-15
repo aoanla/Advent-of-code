@@ -25,7 +25,23 @@ println("$(solve1(d))");
 
 #part 2
 
+boxes = [ Vector{Tuple(Vector{UInt8}, UInt8)}() for i in 1:255 ];
+equality(x,y) = x.first == y.first 
 decode()
 
-equalsop(box, lens) = 
-minusop(box, lens) = 
+function equalsop!(box, lens)  
+    posn = findfirst( label equality);
+    isnothing(posn) ? append!(box, lens) : box[posn] = lens ; 
+end
+
+function minusop(box, lens)
+    out = []
+    for bi in eachindex(box)
+        if equality(bi, lens) 
+            append!(out, box[bi+1:end]);
+            break;
+        end
+        push!(out, box[bi]);
+    end
+    box = out ; #sufficient copy?
+end
