@@ -32,8 +32,7 @@ equality(x,y) = x[1] == y[1]
 function decode(d)
     accum = 0;
     for x in d
-        if x == UInt8('=')
-            continue; #we know it's equals from the fact there's a digit next
+        x == UInt8('=') && continue; #we know it's equals from the fact there's a digit next
         if x == UInt8('-')
             minusop!(boxes[accum], label);
             break;
