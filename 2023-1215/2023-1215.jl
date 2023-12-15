@@ -25,29 +25,15 @@ println("$(solve1(d))");
 
 #part 2
 
-boxes = [ Vector{Tuple(Vector{UInt8}, UInt8)}() for i in 1:255 ];
+boxes = [ Vector{Tuple{Vector{UInt8}, UInt8}}() for i in 1:256 ];
 equality(x,y) = x[1] == y[1] 
 
 
-function decode(d)
-    accum = 0;
-    for x in d
-        x == UInt8('=') && continue; #we know it's equals from the fact there's a digit next
-        if x == UInt8('-')
-            minusop!(boxes[accum], label);
-            break;
-        end
-        if x < UInt8(':') #digit
-            equalsop!(boxes[accum], (label, x-UInt8('0')))
-            break;
-        end
-        accum = hash_accum(accum, x);
-    end
-end
+
 
 function equalsop!(box, lens)  
-    posn = findfirst( label equality);
-    isnothing(posn) ? append!(box, lens) : box[posn] = lens ; 
+    posn = findfirst(x->x[1]==lens[1],box);
+    isnothing(posn) ? push!(box, lens) : box[posn] = lens ; 
 end
 
 function minusop!(box, label)
@@ -59,5 +45,50 @@ function minusop!(box, label)
         end
         push!(out, box[bi]);
     end
-    box = out ; #sufficient copy?
+    copy!(box, out) ; #sufficient copy?
 end
+
+function decode!(d)
+    accum::UInt8 = 0;
+    label = UInt8[];
+    for x in d
+        x == UInt8('=') && continue; #we know it's equals from the fact there's a digit next
+        if x == UInt8('-')
+            minusop!(boxes[accum+1], label); #julia 1-based indexing
+            break;
+        end
+        if x < UInt8(':') #digit
+            equalsop!(boxes[accum+1], (label, x-UInt8('0')))
+            break;
+        end
+        accum = hash_accum(accum, x);
+        push!(label, x);
+    end
+end
+
+function decode_line!(d)
+    srt = 1
+    com = findfirst(comma, d);
+    while !isnothing(com)
+        decode!(d[srt:com]);
+        srt = com + 1;
+        com = findnext(comma, d, srt);
+    end
+    decode!(d[srt:end]);
+end
+
+decode_line!(d)
+
+#=
+accum = 0
+for i in eachindex(boxes)
+    accum += i * mapreduce( x-> x[1]*x[2][2],  + , enumerate(boxes[i]));
+end
+=#
+
+accum = mapreduce(+, enumerate(boxes)) do (i,box)
+    #println("$box");
+    i * mapreduce( x-> x[1]*x[2][2],  + , enumerate(box); init=0);
+end
+
+println("$accum");
