@@ -26,7 +26,7 @@ println("$(solve1(d))");
 #part 2
 
 boxes = [ Vector{Tuple(Vector{UInt8}, UInt8)}() for i in 1:255 ];
-equality(x,y) = x.first == y.first 
+equality(x,y) = x[1] == y[1] 
 decode()
 
 function equalsop!(box, lens)  
