@@ -27,17 +27,34 @@ println("$(solve1(d))");
 
 boxes = [ Vector{Tuple(Vector{UInt8}, UInt8)}() for i in 1:255 ];
 equality(x,y) = x[1] == y[1] 
-decode()
+
+
+function decode(d)
+    accum = 0;
+    for x in d
+        if x == UInt8('=')
+            continue; #we know it's equals from the fact there's a digit next
+        if x == UInt8('-')
+            minusop!(boxes[accum], label);
+            break;
+        end
+        if x < UInt8(':') #digit
+            equalsop!(boxes[accum], (label, x-UInt8('0')))
+            break;
+        end
+        accum = hash_accum(accum, x);
+    end
+end
 
 function equalsop!(box, lens)  
     posn = findfirst( label equality);
     isnothing(posn) ? append!(box, lens) : box[posn] = lens ; 
 end
 
-function minusop(box, lens)
+function minusop!(box, label)
     out = []
     for bi in eachindex(box)
-        if equality(bi, lens) 
+        if box[bi][1] == label 
             append!(out, box[bi+1:end]);
             break;
         end
