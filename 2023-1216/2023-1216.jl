@@ -76,3 +76,15 @@ trace_path(pos, dir, breadcrumbs)
 end
 
 
+#Braindump of insights when I was away doing other things:
+
+#We can fast-forward through .s to the next node that does a thing.
+#Corrollary: the only things we really care about memoising (or possibly even breadcrumbing) are the non "." nodes (which form a graph of course)
+
+#Splitters are the only interesting bits of the space in terms of memoisation - every path that *leaves* a splitter and exits the space without 
+# being split again can be reversed as a path *entering* from that space [hitting the splitter] + the path that leaves the splitter in the opposite direction.
+
+#Similarly a path split by a splitter is equal to the path passing through the splitter "unsplitting" direction (so if we have that...)
+
+#The litmaps are probably too heavy to memoise when we can just memoise the set of all points we passed through (regardless of direction)
+# or even just memoise the breadcrumbs which are a superset of that info.
