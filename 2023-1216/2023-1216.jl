@@ -12,7 +12,8 @@ nl = UInt8('\n')
 
 width = findfirst(==(nl), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
-bitmatrix = falses(size(matrix)); #litness
+bounds = size(matrix)
+bitmatrix = falses(bounds); #litness
 #first dimension is lr
 #second is ud
 
@@ -41,6 +42,8 @@ memo = Dict{Tuple{Tuple{Int8,Int8}, Tuple{Int8,Int8}}, typeof(bitmatrix)}()
 #efficient set to store places, directions we've been already
 breadcrumbs = Set{Tuple{Tuple{Int8, Int8}, Tuple{Int8, Int8}}}() 
 
+posn_clamp(x) = clamp.(x, 0, bounds);
+
                                     #these combinations are insensitive to direction sign
 memoise(pos, dir, item, litmap) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) ? begin 
                                                                                         memo[(pos, dir)] = litmap
@@ -55,20 +58,54 @@ drop_crumb(pos, dir, item, bc) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud(
 
 
 #*starting from* pos, entered with direction dir [so we've not lit pos yet]
-trace_path(pos, dir, breadcrumbs)
+trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     #memoisation win!                                                                                
     haskey(memo, (pos,dir)) && return memo[(pos,dir)]
-    litmap = falses(size(bitmatrix)); #new litmap to work with
+    litmap = falses(bounds); #new litmap to work with
+    #check boundaries - this would be nicer if I had a clamp I guess - we also memoise the last splitter we passed through for path reversal
+    !checkbounds(Bool, matrix, pos...) && begin memoise_splitter(last_splitter, posn_clamp(pos)); return litmap;
     (pos, dir) in breadcrumbs && return litmap # early return because we crossed our path - what do we return as lightmap set?
     
     #we got to here, so this isn't memoised from a previous path, and it's not a loop in our current path
-    if 
     litmap[pos...] |= true ; #light the position
-    item = matrix[pos];
+    item = matrix[pos...];
+    drop_crumb(pos, dir, item, breadcrumbs); #specially treats passing through a splitter orthogonally (as approaching from the opposite dir is the same)
+    
+    #if we haven't yet associated our start position with a splitter, then check if this is the splitter to memoise with
+    if !isnothing(unmemoised_start)
+        #we can't memoise a reversed path that hits a splitter orthogonally (and is split), because that's an irreversible transform
+        # (a splitter can never be a *source* in orthogonal directions)
+        (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) && begin 
+                                                                memoise_splitter( (pos, dir) , unmemoised_start)  ;
+                                                                unmemoised_start = nothing;
+                                                                true
+                                                            end
+    end
+    
+    nexts = transform[item](dir); #next directions to step in
 
-    nexts = transform[item](dir);
-    for d in nexts #bfs
-        litmap .|= trace_path(pos.+d, d, breadcrumbs) #all the interior positions are lit as well
+    #if we hit a splitter we need to be careful about how to memoise - hitting it orthogonally also generates the paths 
+    #that pass "through" it in both directions, so if we're splitting, start the rays *here* so they memoise the split paths at the splitter too
+    if length(nexts) == 2    
+        for d in nexts #bfs
+            litmap .|= trace_path(pos, d, breadcrumbs, unmemoised_start, last_splitter) #all the interior positions are lit as well
+        end
+    else #otherwise this is a single path - but if this cell is a splitter we need to record it as the "last splitter" so we can memoise the exit point if we hit it
+        item in [⮀, ⮁] && last_splitter = (pos, -.(dir) ) #invert direction because this is a *source*
+
+        #TODO if we are still going in the same direction, fast forward through dots until we aren't
+        if nexts[1] == dir
+           pos_n = pos .+ dir
+           while matrix[pos_n] == ⬛
+            !checkbounds(Bool, matrix, pos_n...) && begin memoise_splitter(last_splitter, posn_clamp(pos_n)); return litmap;
+            litmap[pos_n...] |= true;
+            drop_crumb(pos_n, dir, ⬛, breadcrumbs); #do I need to drop crumbs everywhere, or just on interesting nodes?
+            pos_n .+= dir;
+           end
+           pos = pos_n; #first "interesting" point
+        end
+        #
+        litmap .|= trace_path(pos .+ nexts[1], nexts[1], breadcrumbs, unmemoised_start, last_splitter) 
     end
 
     memoise(pos, dir, item, litmap);
