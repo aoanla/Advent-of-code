@@ -44,13 +44,9 @@ transform = Dict( [
         (◺ => trans◺)        ]);
 
 #memoisation dict just in case we need it (pos, dir) -> litmap (now a set of lit points)
-memo = Dict{Tuple{Tuple{Int8,Int8}, Tuple{Int8,Int8}}, Set{Tuple{Int8, Int8}}}()
+#yes I really do just need to make some of these into structs now it's getting silly
+memo = Dict{Tuple{Tuple{Int8,Int8}, Tuple{Int8,Int8}}, Tuple{Set{Tuple{Int8, Int8}}, Tuple{Tuple{Int8,Int8}, Tuple{Int8,Int8}}}}()
 
-#splitter memoisation dicts for exit/entry points 
-                         #splitter pos, dir                      #exit/entry point in edge
-splitter_memo = Dict{Tuple{Tuple{Int8,Int8}, Tuple{Int8,Int8}}, Tuple{Int8, Int8}}()
-                        #exit/entry point          #splitter pos, dir
-rev_splitter_memo = Dict{Tuple{Int8,Int8}, Tuple{Tuple{Int8,Int8}, Tuple{Int8, Int8}}}()
 
 #efficient set to store places, directions we've been already
 crumbs() = Set{Tuple{Tuple{Int8, Int8}, Tuple{Int8, Int8}}}() 
@@ -58,35 +54,47 @@ crumbs() = Set{Tuple{Tuple{Int8, Int8}, Tuple{Int8, Int8}}}()
 posn_clamp(x) = clamp.(x, Int8(1), bounds);
 
 neg(x) = Int8(-1) .* x  
-                                    #these combinations are insensitive to direction sign on entry
-memoise(pos, dir, item, litmap) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) ? begin 
-                                                                                        memo[(pos, dir)] = litmap
-                                                                                        memo[(pos, neg(dir) )] = litmap
-                                                                                    end : memo[(pos, dir)] = litmap
-
-
                                                                                     #needs to be general enough to take path specific breadcrumbs (as bc)
 drop_crumb(pos, dir, item, bc) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) ? begin 
                                                                                     push!(bc, (pos, dir))
                                                                                     push!(bc, (pos, neg(dir) ))
                                                                                 end : push!(bc, (pos, dir)) 
-                            
-memoise_splitter(last_splitter, pos) = isnothing(last_splitter) || begin splitter_memo[last_splitter] = pos ; rev_splitter_memo[pos] = last_splitter; end
+
+rev_dir(x) = (x[1], neg(x[2]) );
+
+global cursor = nothing ; #Global cursor hack to set what the far end of our memoisation target is
+      #posn, direction entered from, EDGE or SPLIT                                                                           
+
+EDGE = true;
+SPLIT = false;
+
+#we want to memoise to *reverse* the chain we've been passed for the edge elements, so we're going to invert some directions here
+                 #far end of chain  #chain       #near end of chain - a splitter                                                      
+function memoise_at(cursor,         tmp_litmap, pos, d)
+    if cursor[3] == EDGE 
+        memo[rev_dir(cursor[1:2])] = (tmp_litmap, rev_dir((pos, d))); 
+    else #SPLIT  here we do want to roll *forwards*
+        memo[cursor[1:2]] = (tmp_litmap, ((0,0),(0,0))) ; #in this case, we don't care about the end point
+        x = 0; #null op for now to see if this works at all
+    end
+end
 
 
 #*starting from* pos, entered with direction dir [so we've not lit pos yet]
 function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     
     #memoisation is somehow broken - we definitely get *lower* answers than without it [so there's some off by one or something in the memoisation]                                                                                
-    haskey(memo, (pos,dir)) && return memo[(pos,dir)];
+    #haskey(memo, (pos,dir)) && return memo[(pos,dir)];
     litmap = Set{Tuple{Int8, Int8}}();
     #check boundaries - this would be nicer if I had a clamp I guess - we also memoise the last splitter we passed through for path reversal
     if !checkbounds(Bool, matrix, pos...) 
-        memoise_splitter(last_splitter, posn_clamp(pos)); 
+        global cursor = (pos .- dir, dir, EDGE); #the point we left the edge 
         return litmap; 
     end
-    (pos, dir) in breadcrumbs && return litmap # early return because we crossed our path - what do we return as lightmap set?
-    
+    if (pos, dir) in breadcrumbs
+        global cursor = nothing #I don't think we can use a valid cursor if we end due to loop detection 
+        return litmap # early return because we crossed our path - what do we return as lightmap set?
+    end
     #we got to here, so this isn't memoised from a previous path, and it's not a loop in our current path
     push!(litmap, pos); #light the position
     item = matrix[pos...]; #find out what's in our cell
@@ -95,28 +103,45 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     drop_crumb(pos, dir, item, breadcrumbs); #specially treats passing through a splitter orthogonally (as approaching from the opposite dir is the same)
     
     #if we haven't yet associated our start position with a splitter, then check if this is the splitter to memoise with
-    if !isnothing(unmemoised_start)
+    #if !isnothing(unmemoised_start)
         #we can't memoise a reversed path that hits a splitter orthogonally (and is split), because that's an irreversible transform
         # (a splitter can never be a *source* in orthogonal directions)
-        (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) && begin #memoisable
-                                                                memoise_splitter( (pos, dir) , unmemoised_start)  ;
-                                                                unmemoised_start = nothing;
-                                                                true
-                                                            end
-        (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) && begin unmemoised_start = nothing; true end #this path is no longer reversible
-    end
+    #    (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) && begin #memoisable
+    #                                                            memoise_splitter( (pos, dir) , unmemoised_start)  ;
+     #                                                           unmemoised_start = nothing;
+      #                                                          true
+      #                                                      end
+    #    (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) && begin unmemoised_start = nothing; true end #this path is no longer reversible
+    #end
     
     nexts = transform[item](dir); #next directions to step in
     
     #if we hit a splitter we need to be careful about how to memoise - hitting it orthogonally also generates the paths 
     #that pass "through" it in both directions, so if we're splitting, start the rays *here* so they memoise the split paths at the splitter too
     if length(nexts) == 2 
-        
+        #this is also the point we "collect" a memoisation for a cursor, and blank the cursor
+        cursors = [];
         for d in nexts #bfs
-            union!(litmap, trace_path(pos, d, breadcrumbs, unmemoised_start, last_splitter) ) #all the interior positions are lit as well
+            tmp_litmap  = trace_path(pos, d, breadcrumbs, unmemoised_start, last_splitter)  #all the interior positions are lit as well
+            if !isnothing(cursor)
+                memoise_at(cursor, tmp_litmap, pos, d);
+                push!(cursors, deepcopy(cursor)); #valid path to this point, tracing back
+                global cursor = nothing;
+            end
+            union!(litmap, tmp_litmap);
+        end
+        if length(cursors) == 2  #*if* we have a complete history up to here, we can pull it back further, 
+            #we should be able to extend the two memoisations we just did to add them to each other             
+            c1 = rev_dir(cursors[1][1:2])
+            c2 = rev_dir(cursors[2][1:2])
+            memo[c1] = (litmap , cursors[2][1:2]);
+            memo[c2] = (litmap , cursors[1][1:2]); 
+            global cursor = (pos, dir, SPLIT);
+            #and we *should also be able to build a further chain that works back to the next splitter to memoise the paths between splitters... 
+            #TODO
         end
     else #otherwise this is a single path - but if this cell is a splitter we need to record it as the "last splitter" so we can memoise the exit point if we hit it
-        item in [⮀, ⮁] && begin last_splitter = (pos, neg(dir) ); true end #invert direction because this is a *source*
+        #item in [⮀, ⮁] && begin last_splitter = (pos, neg(dir) ); true end #invert direction because this is a *source*
 
         #TODO if we are still going in the same direction, fast forward through ⬛  until we aren't
         pos_out = pos;
@@ -124,15 +149,15 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
            
             pos_n = pos .+ dir
             if !checkbounds(Bool, matrix, pos_n...) 
-                memoise_splitter(last_splitter, posn_clamp(pos_n)); 
+                global cursor = (pos .- dir, dir, EDGE);
                 return litmap; 
             end
             while matrix[pos_n...] == ⬛
                 push!(litmap, pos_n); #|= true;
-                #drop_crumb(pos_n, dir, ⬛, breadcrumbs); #do I need to drop crumbs everywhere, or just on interesting nodes?
+
                 pos_n = pos_n .+ dir;
                 if !checkbounds(Bool, matrix, pos_n...) 
-                    memoise_splitter(last_splitter, posn_clamp(pos_n)); 
+                    global cursor = (pos .- dir, dir, EDGE);
                     return litmap; 
                 end
             end
@@ -142,38 +167,25 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
         union!(litmap, trace_path(pos_out .+ nexts[1], nexts[1], breadcrumbs, unmemoised_start, last_splitter) )
     end
 
-    #println("Memoising $litmap @ $pos $dir"); #I think this memoisation is broken *except* at branch points at splitters
-    #nope still broken in the same way even from splitters
-    #Ok, after thinking about this, the issue is that the breadcrumbs are adding state that's problematic for the memoisation
-    #I already thought memoisation was mostly useful for stuff that exits the matrix (to fast-start a search *entering* the matrix)
-    # but I think it's also now only *possible* to memoise a path between a splitter [outwards] and an exit point .
-    # all other memoised sets will be potentially "too small" thanks to the breadcrumbing effects limiting loops.
-    if (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) 
-        memoise(pos, dir, item, deepcopy(litmap));  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
-    end
     return litmap 
 end
 
-rev_dir(x) = (x[1], neg(x[2]) );
+
 
 function try_entry_point(pos) #start off grid to give us direction for free
     dir =   pos[1] == 0 ? r : 
             pos[1] == bounds[1]+1 ? l : 
             pos[2] == 0 ? d : u;
 
+    pos = pos .+ dir
     points = Set{Tuple{Int8, Int8}}();
     #we already traced this path "out" of a splitter so we can reverse it
-    #this won't work unless memoisation as a whole works [which it seems not to]
-    #something further weird is happening as the two memoisation sets seem to disagree with each other, so I'm missing a condition
-    if haskey(rev_splitter_memo, pos)
-       splitter = rev_splitter_memo[pos .+ dir];
-       if haskey(memo, splitter)
-            points = memo[splitter] ∪ memo[rev_dir(splitter)];
-       else #don't have reverse direction
-            points = trace_path(splitter[1], splitter[2], crumbs(), splitter[1], nothing) ∪ memo[rev_dir(splitter)];
-       end
+    if haskey(memo, (pos, dir))
+            (memo_map, memo_splitter) = memo[(pos, dir)]; #this is now the direction we need to start off in the splitter 
+            union!(points, memo_map); #start off with the points we should have
+            union!(points, trace_path(memo_splitter[1], memo_splitter[2], crumbs(), memo_splitter[1], nothing))
     else #otherwise we have to do all the work ourselves
-       points = trace_path(pos .+ dir, dir, crumbs(), pos, nothing);
+       points = trace_path(pos, dir, crumbs(), pos, nothing);
     end
     length(points)
 end
