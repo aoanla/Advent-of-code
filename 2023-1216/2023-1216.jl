@@ -11,15 +11,12 @@ nl = UInt8('\n')
 ◺ = UInt8('\\')
 
 width = findfirst(==(nl), d);
-matrix = reshape(d, width, :)[begin:end-1, :];
+matrix = reshape(d, width, :)[begin:end-1, :]; #cut off the newlines
 
 
 bounds = size(matrix)
 println("$bounds")
 
-
-
-#bitmatrix = falses(bounds); #litness
 #first dimension is lr
 #second is ud
 
@@ -74,26 +71,26 @@ function memoise_at(cursor,         tmp_litmap, pos, d)
     if cursor[3] == EDGE 
         memo[rev_dir(cursor[1:2])] = (tmp_litmap, rev_dir((pos, d))); 
     else #SPLIT  here we do want to roll *forwards*
-        memo[cursor[1:2]] = (tmp_litmap, ((0,0),(0,0))) ; #in this case, we don't care about the end point
+        memo[cursor[1:2]] = (tmp_litmap, ((0,0),(0,0))) ; #in this case, we don't care about the end point, for now
         x = 0; #null op for now to see if this works at all
     end
 end
 
 
 #*starting from* pos, entered with direction dir [so we've not lit pos yet]
-function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
+function trace_path(pos, dir, breadcrumbs)
     
-    #memoisation is somehow broken - we definitely get *lower* answers than without it [so there's some off by one or something in the memoisation]                                                                                
+    #eventually, this will work *for splitters* in some cases, see TODO later on in this function                                                                                
     #haskey(memo, (pos,dir)) && return memo[(pos,dir)];
     litmap = Set{Tuple{Int8, Int8}}();
-    #check boundaries - this would be nicer if I had a clamp I guess - we also memoise the last splitter we passed through for path reversal
+    #check boundaries - this would be nicer if I had a clamp I guess - we also set the cursor so we can memoise the edge we left at
     if !checkbounds(Bool, matrix, pos...) 
         global cursor = (pos .- dir, dir, EDGE); #the point we left the edge 
         return litmap; 
     end
     if (pos, dir) in breadcrumbs
         global cursor = nothing #I don't think we can use a valid cursor if we end due to loop detection 
-        return litmap # early return because we crossed our path - what do we return as lightmap set?
+        return litmap # early return because we crossed our path 
     end
     #we got to here, so this isn't memoised from a previous path, and it's not a loop in our current path
     push!(litmap, pos); #light the position
@@ -101,18 +98,6 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     
     #we're now only dropping crumbs on interesting spots (not ⬛ s)
     drop_crumb(pos, dir, item, breadcrumbs); #specially treats passing through a splitter orthogonally (as approaching from the opposite dir is the same)
-    
-    #if we haven't yet associated our start position with a splitter, then check if this is the splitter to memoise with
-    #if !isnothing(unmemoised_start)
-        #we can't memoise a reversed path that hits a splitter orthogonally (and is split), because that's an irreversible transform
-        # (a splitter can never be a *source* in orthogonal directions)
-    #    (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) && begin #memoisable
-    #                                                            memoise_splitter( (pos, dir) , unmemoised_start)  ;
-     #                                                           unmemoised_start = nothing;
-      #                                                          true
-      #                                                      end
-    #    (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) && begin unmemoised_start = nothing; true end #this path is no longer reversible
-    #end
     
     nexts = transform[item](dir); #next directions to step in
     
@@ -122,7 +107,7 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
         #this is also the point we "collect" a memoisation for a cursor, and blank the cursor
         cursors = [];
         for d in nexts #bfs
-            tmp_litmap  = trace_path(pos, d, breadcrumbs, unmemoised_start, last_splitter)  #all the interior positions are lit as well
+            tmp_litmap  = trace_path(pos, d, breadcrumbs)  #all the interior positions are lit as well
             if !isnothing(cursor)
                 memoise_at(cursor, tmp_litmap, pos, d);
                 push!(cursors, deepcopy(cursor)); #valid path to this point, tracing back
@@ -140,10 +125,8 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
             #and we *should also be able to build a further chain that works back to the next splitter to memoise the paths between splitters... 
             #TODO
         end
-    else #otherwise this is a single path - but if this cell is a splitter we need to record it as the "last splitter" so we can memoise the exit point if we hit it
-        #item in [⮀, ⮁] && begin last_splitter = (pos, neg(dir) ); true end #invert direction because this is a *source*
-
-        #TODO if we are still going in the same direction, fast forward through ⬛  until we aren't
+    else 
+        #if we are still going in the same direction, fast forward through ⬛  until we aren't
         pos_out = pos;
         if nexts[1] == dir
            
@@ -164,7 +147,7 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
             pos_out  = pos_n .- dir; #first "interesting" point, remembering to subtract off the last step
         end
         #
-        union!(litmap, trace_path(pos_out .+ nexts[1], nexts[1], breadcrumbs, unmemoised_start, last_splitter) )
+        union!(litmap, trace_path(pos_out .+ nexts[1], nexts[1], breadcrumbs) )
     end
 
     return litmap 
@@ -183,9 +166,9 @@ function try_entry_point(pos) #start off grid to give us direction for free
     if haskey(memo, (pos, dir))
             (memo_map, memo_splitter) = memo[(pos, dir)]; #this is now the direction we need to start off in the splitter 
             union!(points, memo_map); #start off with the points we should have
-            union!(points, trace_path(memo_splitter[1], memo_splitter[2], crumbs(), memo_splitter[1], nothing))
+            union!(points, trace_path(memo_splitter[1], memo_splitter[2], crumbs()))
     else #otherwise we have to do all the work ourselves
-       points = trace_path(pos, dir, crumbs(), pos, nothing);
+       points = trace_path(pos, dir, crumbs());
     end
     length(points)
 end
@@ -193,13 +176,12 @@ end
 #lr, ud coords
 @time println("$( try_entry_point((0, 1)) )")
 
+#this could be prettier!
 function maximise_energize()
     best = 0;
     best_val = (0,0);
     for i in 1:bounds[1]
-        #println("Attempting at $(i) 0")
         attempt = try_entry_point( (i, 0) );
-        #println("$attempt")
         if attempt > best
             best = attempt
             best_val = (i, 1);
@@ -211,9 +193,7 @@ function maximise_energize()
         end
     end
     for i in 1:bounds[2]
-        #println("Attempting at 0 $(i)")
         attempt = try_entry_point( (0, i) );
-        #println("$attempt")
         if attempt > best
             best = attempt
             best_val = (1, i);
@@ -227,11 +207,8 @@ function maximise_energize()
     (best, best_val)
 end
 
-
-#println("$( try_entry_point((4, 0)) )")
-
 @time println("$(maximise_energize())")
-@time println("$(maximise_energize())")
+#@time println("$(maximise_energize())")
 #Braindump of insights when I was away doing other things:
 
 #We can fast-forward through .s to the next node that does a thing. *
