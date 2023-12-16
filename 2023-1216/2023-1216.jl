@@ -1,6 +1,6 @@
 
 
-d = read("input2");
+d = read("input");
 
 #items, fun with Unicode
 nl = UInt8('\n')
@@ -78,7 +78,7 @@ memoise_splitter(last_splitter, pos) = isnothing(last_splitter) || begin splitte
 function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     
     #memoisation is somehow broken - we definitely get *lower* answers than without it [so there's some off by one or something in the memoisation]                                                                                
-    #haskey(memo, (pos,dir)) && return memo[(pos,dir)];
+    haskey(memo, (pos,dir)) && return memo[(pos,dir)];
     litmap = Set{Tuple{Int8, Int8}}();
     #check boundaries - this would be nicer if I had a clamp I guess - we also memoise the last splitter we passed through for path reversal
     if !checkbounds(Bool, matrix, pos...) 
@@ -143,7 +143,10 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
     end
 
     #println("Memoising $litmap @ $pos $dir"); #I think this memoisation is broken *except* at branch points at splitters
-    #memoise(pos, dir, item, litmap);  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
+    #nope still broken in the same way even from splitters
+    if (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) 
+        memoise(pos, dir, item, deepcopy(litmap));  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
+    end
     return litmap 
 end
 
@@ -157,17 +160,22 @@ function try_entry_point(pos) #start off grid to give us direction for free
     points = Set{Tuple{Int8, Int8}}();
     #we already traced this path "out" of a splitter so we can reverse it
     #this won't work unless memoisation as a whole works [which it seems not to]
-    #if haskey(rev_splitter_memo, pos)
-    #   splitter = rev_splitter_memo[pos .+ dir];
-    #   points = memo[splitter] ∪ memo[rev_dir(splitter)];
-    #else #otherwise we have to do all the work ourselves
+    #something further weird is happening as the two memoisation sets seem to disagree with each other, so I'm missing a condition
+    if haskey(rev_splitter_memo, pos)
+       splitter = rev_splitter_memo[pos .+ dir];
+       if haskey(memo, splitter)
+            points = memo[splitter] ∪ memo[rev_dir(splitter)];
+       else #don't have reverse direction
+            points = trace_path(splitter[1], splitter[2], crumbs(), splitter[1], nothing) ∪ memo[rev_dir(splitter)];
+       end
+    else #otherwise we have to do all the work ourselves
        points = trace_path(pos .+ dir, dir, crumbs(), pos, nothing);
-    #end
+    end
     length(points)
 end
 
 #lr, ud coords
-println("$( try_entry_point((0, 1)) )")
+@time println("$( try_entry_point((0, 1)) )")
 
 function maximise_energize()
     best = 0;
@@ -206,8 +214,8 @@ end
 
 #println("$( try_entry_point((4, 0)) )")
 
-#println("$(maximise_energize())")
-
+@time println("$(maximise_energize())")
+@time println("$(maximise_energize())")
 #Braindump of insights when I was away doing other things:
 
 #We can fast-forward through .s to the next node that does a thing. *
