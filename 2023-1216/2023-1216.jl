@@ -13,7 +13,6 @@ nl = UInt8('\n')
 width = findfirst(==(nl), d);
 matrix = reshape(d, width, :)[begin:end-1, :]; #cut off the newlines
 
-
 bounds = size(matrix)
 println("$bounds")
 
@@ -76,29 +75,31 @@ function memoise_at(cursor,         tmp_litmap, pos, d)
     end
 end
 
+lookup = Dict([(u=>0x1), (d=>0x2), (l=>0x4), (r=>0x8)]);
 
 #*starting from* pos, entered with direction dir [so we've not lit pos yet]
-function trace_path(pos, dir, breadcrumbs)
+function trace_path(pos, dir)
     
     #eventually, this will work *for splitters* in some cases, see TODO later on in this function                                                                                
     #haskey(memo, (pos,dir)) && return memo[(pos,dir)];
-    litmap = Set{Tuple{Int8, Int8}}();
+    #litmap = Set{Tuple{Int8, Int8}}();
     #check boundaries - this would be nicer if I had a clamp I guess - we also set the cursor so we can memoise the edge we left at
     if !checkbounds(Bool, matrix, pos...) 
-        global cursor = (pos .- dir, dir, EDGE); #the point we left the edge 
-        return litmap; 
+    #    global cursor = (pos .- dir, dir, EDGE); #the point we left the edge 
+        return; # litmap; 
     end
-    if (pos, dir) in breadcrumbs
-        global cursor = nothing #I don't think we can use a valid cursor if we end due to loop detection 
-        return litmap # early return because we crossed our path 
+    if (breadcrumbs[pos...] & lookup[dir]) != 0
+    #    global cursor = nothing #I don't think we can use a valid cursor if we end due to loop detection 
+        return;# litmap # early return because we crossed our path 
     end
     #we got to here, so this isn't memoised from a previous path, and it's not a loop in our current path
-    push!(litmap, pos); #light the position
+    #push!(litmap, pos); #light the position
     item = matrix[pos...]; #find out what's in our cell
     
     #we're now only dropping crumbs on interesting spots (not ⬛ s)
-    drop_crumb(pos, dir, item, breadcrumbs); #specially treats passing through a splitter orthogonally (as approaching from the opposite dir is the same)
-    
+    #drop_crumb(pos, dir, item, breadcrumbs); #specially treats passing through a splitter orthogonally (as approaching from the opposite dir is the same)
+    global breadcrumbs[pos...] |= lookup[dir];
+
     nexts = transform[item](dir); #next directions to step in
     
     #if we hit a splitter we need to be careful about how to memoise - hitting it orthogonally also generates the paths 
@@ -107,15 +108,15 @@ function trace_path(pos, dir, breadcrumbs)
         #this is also the point we "collect" a memoisation for a cursor, and blank the cursor
         cursors = [];
         for d in nexts #bfs
-            tmp_litmap  = trace_path(pos, d, breadcrumbs)  #all the interior positions are lit as well
-            if !isnothing(cursor)
-                memoise_at(cursor, tmp_litmap, pos, d);
-                push!(cursors, deepcopy(cursor)); #valid path to this point, tracing back
-                global cursor = nothing;
-            end
-            union!(litmap, tmp_litmap);
+            trace_path(pos, d)  #all the interior positions are lit as well
+            #if !isnothing(cursor)
+                #memoise_at(cursor, tmp_litmap, pos, d);
+                #push!(cursors, deepcopy(cursor)); #valid path to this point, tracing back
+            #    global cursor = nothing;
+            #end
+            #union!(litmap, tmp_litmap);
         end
-        if length(cursors) == 2  #*if* we have a complete history up to here, we can pull it back further, 
+        #=if length(cursors) == 2  #*if* we have a complete history up to here, we can pull it back further, 
             #we should be able to extend the two memoisations we just did to add them to each other             
             c1 = rev_dir(cursors[1][1:2])
             c2 = rev_dir(cursors[2][1:2])
@@ -124,7 +125,7 @@ function trace_path(pos, dir, breadcrumbs)
             global cursor = (pos, dir, SPLIT);
             #and we *should also be able to build a further chain that works back to the next splitter to memoise the paths between splitters... 
             #TODO
-        end
+        end =#
     else 
         #if we are still going in the same direction, fast forward through ⬛  until we aren't
         pos_out = pos;
@@ -132,25 +133,25 @@ function trace_path(pos, dir, breadcrumbs)
            
             pos_n = pos .+ dir
             if !checkbounds(Bool, matrix, pos_n...) 
-                global cursor = (pos .- dir, dir, EDGE);
-                return litmap; 
+                #global cursor = (pos .- dir, dir, EDGE);
+                return; #litmap; 
             end
             while matrix[pos_n...] == ⬛
-                push!(litmap, pos_n); #|= true;
-
+                #push!(litmap, pos_n); #|= true;
+                global breadcrumbs[pos_n...] |= lookup[dir];
                 pos_n = pos_n .+ dir;
                 if !checkbounds(Bool, matrix, pos_n...) 
-                    global cursor = (pos .- dir, dir, EDGE);
-                    return litmap; 
+                #    global cursor = (pos .- dir, dir, EDGE);
+                    return; #litmap; 
                 end
             end
             pos_out  = pos_n .- dir; #first "interesting" point, remembering to subtract off the last step
         end
         #
-        union!(litmap, trace_path(pos_out .+ nexts[1], nexts[1], breadcrumbs) )
+        trace_path(pos_out .+ nexts[1], nexts[1]) 
     end
 
-    return litmap 
+    return; #litmap 
 end
 
 
@@ -161,20 +162,26 @@ function try_entry_point(pos) #start off grid to give us direction for free
             pos[2] == 0 ? d : u;
 
     pos = pos .+ dir
-    points = Set{Tuple{Int8, Int8}}();
+    #points = Set{Tuple{Int8, Int8}}();
     #we already traced this path "out" of a splitter so we can reverse it
-    if haskey(memo, (pos, dir))
-            (memo_map, memo_splitter) = memo[(pos, dir)]; #this is now the direction we need to start off in the splitter 
-            union!(points, memo_map); #start off with the points we should have
-            union!(points, trace_path(memo_splitter[1], memo_splitter[2], crumbs()))
-    else #otherwise we have to do all the work ourselves
-       points = trace_path(pos, dir, crumbs());
+    #if haskey(memo, (pos, dir))
+    #        (memo_map, memo_splitter) = memo[(pos, dir)]; #this is now the direction we need to start off in the splitter 
+    #        union!(points, memo_map); #start off with the points we should have
+    #        union!(points, trace_path(memo_splitter[1], memo_splitter[2], crumbs()))
+    #else #otherwise we have to do all the work ourselves
+    global breadcrumbs = [ UInt8(0) for j in 1:bounds[1], i in 1:bounds[2]]
+    trace_path(pos, dir);
+    #end
+    println("$breadcrumbs")
+    count(breadcrumbs) do v
+        v != 0
     end
-    length(points)
 end
 
 #lr, ud coords
 @time println("$( try_entry_point((0, 1)) )")
+
+exit()
 
 #this could be prettier!
 function maximise_energize()
