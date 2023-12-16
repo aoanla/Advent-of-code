@@ -1,6 +1,6 @@
 
 
-d = read("input");
+d = read("input2");
 
 #items, fun with Unicode
 nl = UInt8('\n')
@@ -64,6 +64,7 @@ memoise(pos, dir, item, litmap) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud
                                                                                         memo[(pos, neg(dir) )] = litmap
                                                                                     end : memo[(pos, dir)] = litmap
 
+
                                                                                     #needs to be general enough to take path specific breadcrumbs (as bc)
 drop_crumb(pos, dir, item, bc) = (item == ⮁ && lr(dir)) || (item == ⮀ && ud(dir)) ? begin 
                                                                                     push!(bc, (pos, dir))
@@ -118,9 +119,10 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
         item in [⮀, ⮁] && begin last_splitter = (pos, neg(dir) ); true end #invert direction because this is a *source*
 
         #TODO if we are still going in the same direction, fast forward through ⬛  until we aren't
+        pos_out = pos;
         if nexts[1] == dir
            
-           pos_n = pos .+ dir
+            pos_n = pos .+ dir
             if !checkbounds(Bool, matrix, pos_n...) 
                 memoise_splitter(last_splitter, posn_clamp(pos_n)); 
                 return litmap; 
@@ -134,13 +136,14 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
                     return litmap; 
                 end
             end
-            pos = pos_n .- dir; #first "interesting" point, remembering to subtract off the last step
+            pos_out  = pos_n .- dir; #first "interesting" point, remembering to subtract off the last step
         end
         #
-        union!(litmap, trace_path(pos .+ nexts[1], nexts[1], breadcrumbs, unmemoised_start, last_splitter) )
+        union!(litmap, trace_path(pos_out .+ nexts[1], nexts[1], breadcrumbs, unmemoised_start, last_splitter) )
     end
 
-    memoise(pos, dir, item, litmap);  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
+    #println("Memoising $litmap @ $pos $dir"); #I think this memoisation is broken *except* at branch points at splitters
+    #memoise(pos, dir, item, litmap);  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
     return litmap 
 end
 
@@ -203,7 +206,7 @@ end
 
 #println("$( try_entry_point((4, 0)) )")
 
-println("$(maximise_energize())")
+#println("$(maximise_energize())")
 
 #Braindump of insights when I was away doing other things:
 
