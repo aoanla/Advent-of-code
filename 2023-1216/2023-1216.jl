@@ -153,6 +153,7 @@ function try_entry_point(pos) #start off grid to give us direction for free
 
     points = Set{Tuple{Int8, Int8}}();
     #we already traced this path "out" of a splitter so we can reverse it
+    #this won't work unless memoisation as a whole works [which it seems not to]
     #if haskey(rev_splitter_memo, pos)
     #   splitter = rev_splitter_memo[pos .+ dir];
     #   points = memo[splitter] ∪ memo[rev_dir(splitter)];
