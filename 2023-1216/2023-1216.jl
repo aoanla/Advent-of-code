@@ -144,6 +144,10 @@ function trace_path(pos, dir, breadcrumbs, unmemoised_start, last_splitter)
 
     #println("Memoising $litmap @ $pos $dir"); #I think this memoisation is broken *except* at branch points at splitters
     #nope still broken in the same way even from splitters
+    #Ok, after thinking about this, the issue is that the breadcrumbs are adding state that's problematic for the memoisation
+    #I already thought memoisation was mostly useful for stuff that exits the matrix (to fast-start a search *entering* the matrix)
+    # but I think it's also now only *possible* to memoise a path between a splitter [outwards] and an exit point .
+    # all other memoised sets will be potentially "too small" thanks to the breadcrumbing effects limiting loops.
     if (item == ⮁ && ud(dir)) || (item == ⮀ && lr(dir)) 
         memoise(pos, dir, item, deepcopy(litmap));  #fastforward probably ensures we don't waste *too* much space with ⬛ memoisation
     end
