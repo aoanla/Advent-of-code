@@ -4,3 +4,4 @@
 **/input4
 **/target/
 **/Cargo.lock
+.vscode/
