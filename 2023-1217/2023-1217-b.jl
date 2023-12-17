@@ -88,19 +88,21 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     prev = Dict{cell_data, cell_data}() #dictionary of previous points
     s_cell = cell_data(s, 1, 1); #count 1 == 0 really (thanks Julia!)
 
-    goalscore = [ [typemax(1) for i in 1:4, j in 1:max_c] for k in 1:bounds[1], l in 1:bounds[2] ]  #cost s -> cell
-    goalscore[s][1,1] = 0 #zero cost to not move at all!
+    #goalscore = [ [typemax(1) for i in 1:4, j in 1:max_c] for k in 1:bounds[1], l in 1:bounds[2] ]  #cost s -> cell
+    #goalscore[s][1,1] = 0 #zero cost to not move at all!
+    goalscore = DefaultDict{cell_data, Int}(typemax(1))
+    goalscore[s_cell] =0; 
 
     #we need to note where we last entered each node from and now many times we'd done that exact direction 
     #movehistory = Dict{CartesianIndex{2}, Tuple{CartesianIndex{2}, UInt8}}([s=>(CartesianIndex(0,0), 0)]);
 
     #fscore = fill(typemax(1), bounds) #f, our heuristic estimate for s->g via cell 
-    fscore = [ [typemax(1) for i in 1:4, j in 1:max_c] for k in 1:bounds[1], l in 1:bounds[2] ] 
-    fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
+    #fscore = [ [typemax(1) for i in 1:4, j in 1:max_c] for k in 1:bounds[1], l in 1:bounds[2] ] 
+    #fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
+    #fscore = DefaultDict(typemax(1), [s_cell => h(s_cell)])
 
 
-
-    openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #need to sort out *what* we can use as a priority queue in Julia
+    openset = PriorityQueue{cell_data, Int}(s_cell => h(s_cell) ) #need to sort out *what* we can use as a priority queue in Julia
 
     while !isempty(openset)
 
@@ -108,8 +110,9 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
         # Docs claim popfirst! gives the pair K->V 
         # Julia claims popfirst! is not implemented for PriorityQueue [at least a v0.18.15] and I need to use dequeue! (which is supposed to be deprecate)
         # and only gives K not V !
-        cursor = dequeue!(openset) #the highest priority (lowest "value") node
-        score = fscore[cursor.c][cursor.dir, cursor.count]; 
+        cursor, score = first(openset) #the highest priority (lowest "value") node
+        dequeue!(openset)
+        #score = fscore[cursor.c][cursor.dir, cursor.count]; 
         cursor.c == g #=we got there!=# && begin
                                                 println("$(reconstruct_path(prev, cursor))"); 
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
@@ -119,16 +122,16 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
         for i in accessible(cursor)
             di = dir_to_num[i]
             cand = cell_data(cursor.c+i, di, cursor.dir == di ? cursor.count+1 : 1)
-            trialgoalscore = goalscore[cursor.c][cursor.dir, cursor.count] + matrix[cand.c];
-            if trialgoalscore < goalscore[cand.c][di, cand.count]
+            trialgoalscore = goalscore[cursor] + matrix[cand.c];
+            if trialgoalscore < goalscore[cand]
                 prev[cand] = cursor 
-                goalscore[cand.c][di,cand.count] = trialgoalscore
+                goalscore[cand] = trialgoalscore
                 #movehistory[cand] = i == hist[1] ? (i, hist[2]+1) : (i, 1)  #accrue straight lines - it's okay for this to change if cand leaves and re-enters the open set
-                fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
+                
                 #if haskey[openset] #update priority (which *can* change here I think!)
                 #    openset cand priority = fscore[cand]
                 #else 
-                openset[cand] = fscore[cand.c][di,cand.count]
+                openset[cand] = trialgoalscore + h(cand)
                 #end
             end
         end
