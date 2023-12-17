@@ -2,7 +2,7 @@
 using Pkg
 Pkg.activate(".")
 using DataStructures #I really don't to write my own PriorityQueue
-
+using GLMakie
 #I think A* is probably fine for this, if the heuristic encodes the cost of an overall angle of approach that makes it hard to "alternate directions"
 # (That is: since we have to move 1 orthogonally for every 3 down, at least, paths which are "straight down" actually cost more since we have to go
 #                                                                                                                   3 down, 1 left, 1 right [total cost 5]
@@ -76,6 +76,28 @@ function reconstruct_path(prev, cursor)
     totalpath
 end
 
+makie_markers = ['▾', '▴', '▶', '◀']
+#makie_markers = ['▶', '◀', '▾', '▴']
+
+""" path here is an output of reconstruct_path containing cell_data objects
+"""
+function path_to_makie(path)
+    points = (x->Point2f(x.c[1], x.c[2])).(path) 
+    dirs = (x->makie_markers[x.dir]).(path)
+    counts  = (x->x.count).(path)
+    points, dirs, counts
+end
+
+
+function setupplot(#=p,d, l=#)
+    #p, d, l = @lift( $makie_data ) ;
+    fig, ax, hm = heatmap(matrix) ; #the backing matrix
+    #scatter!(p, color=l, marker=d)
+    Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
+    fig 
+end
+
+
 
 function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
@@ -96,39 +118,84 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
     openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #
 
-    while !isempty(openset)
+    #Makie
+    #pth = Observable{Vector{cell_data}}([s_cell]);
+    fig, ax, hm = heatmap(matrix) ; #the backing matrix 
+    point(x) = Point2f(x.c[1], x.c[2])
+    pts  = Observable(Point2f[point(s_cell)]) #@lift( map(point, $pth)  );
+    dirs = Observable(Char[makie_markers[s_cell.dir]]) #@lift( map(x->makie_markers[x.dir], $pth) );
+    counts = Observable(Int[s_cell.count]) #@lift( map(x->x.count, $pth) );
+    sc = scatter!(pts, color=counts, marker=dirs, colormap=:grays)
+    Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
+    Colorbar(fig[end+1, begin], sc, vertical=false);
+    display(fig)
+    #display(f);
+    #v = VideoStream(f, format="gif", framerate=24)
+    #Make
+    cc = 0;
+    #record(f, "test.gif") do io
+        while !isempty(openset)
 
-        #note, there's something *screwy* with the documentation for PriorityQueue - 
-        # Docs claim popfirst! gives the pair K->V 
-        # Julia claims popfirst! is not implemented for PriorityQueue [at least a v0.18.15] and I need to use dequeue! (which is supposed to be deprecate)
-        # and only gives K not V !
-        cursor = dequeue!(openset) #the highest priority (lowest "value") node
-        score = fscore[cursor.c][cursor.dir, cursor.count]; 
-        cursor.c == g #=we got there!=# && begin
-                                                println("$(reconstruct_path(prev, cursor))"); 
-                                                return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
-                                        end 
-        
-        #evaluate neighbours of cursor = which means we need to store the direction we entered cursor from and how long we'd been moving in that direction
-        for i in accessible(cursor)
-            di = dir_to_num[i]
-            cand = cell_data(cursor.c+i, di, cursor.dir == di ? cursor.count+1 : 1)
-            trialgoalscore = goalscore[cursor.c][cursor.dir, cursor.count] + matrix[cand.c];
-            if trialgoalscore < goalscore[cand.c][di, cand.count]
-                prev[cand] = cursor 
-                goalscore[cand.c][di,cand.count] = trialgoalscore
-                
-                fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
- 
-                openset[cand] = fscore[cand.c][di,cand.count]
-                
+            #note, there's something *screwy* with the documentation for PriorityQueue - 
+            # Docs claim popfirst! gives the pair K->V 
+            # Julia claims popfirst! is not implemented for PriorityQueue [at least a v0.18.15] and I need to use dequeue! (which is supposed to be deprecate)
+            # and only gives K not V !
+            cursor = dequeue!(openset) #the highest priority (lowest "value") node
+            cc += 1;
+            #Makie
+            #c[] = cursor ; #update Observable for plot
+            if cc % 100 == 0
+                pth = reconstruct_path(prev, cursor);
+                pts.val = map(point, pth);
+                dirs.val = map(x->makie_markers[x.dir], pth)
+                counts.val = map(x->x.count, pth);
+                notify(pts); notify(dirs); notify(counts);
+
+                #recordframe!(v);
+                sleep(0.05)
             end
-        end
-    end 
+            #Makie
 
+            score = fscore[cursor.c][cursor.dir, cursor.count]; 
+            cursor.c == g #=we got there!=# && begin
+                                                #save("./output.gif", v);
+                                                #return reconstruct_path(prev, cursor);
+                                                #p,d,l = path_to_makie(pth);
+                                                #scatter!(f, p, color=l, marker=d)
+                                                #println("$(reconstruct_path(prev, cursor))"); 
+                                                return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
+                                            end 
+        
+            #evaluate neighbours of cursor = which means we need to store the direction we entered cursor from and how long we'd been moving in that direction
+            for i in accessible(cursor)
+                di = dir_to_num[i]
+                cand = cell_data(cursor.c+i, di, cursor.dir == di ? cursor.count+1 : 1)
+                trialgoalscore = goalscore[cursor.c][cursor.dir, cursor.count] + matrix[cand.c];
+                if trialgoalscore < goalscore[cand.c][di, cand.count]
+                    prev[cand] = cursor 
+                    goalscore[cand.c][di,cand.count] = trialgoalscore
+                
+                    fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
+ 
+                    openset[cand] = fscore[cand.c][di,cand.count]
+                
+                end
+            end
+        end 
+    #end
     return typemax(1)
 end
 
-println("$(A✴(CartesianIndex((1,1)), goal))");
+
+fig, ax, hm = heatmap(matrix) ; #the backing matrix
+#scatter!(p, color=l, marker=d)
+pth = A✴(CartesianIndex((1,1)), goal)
+#p,d,l = path_to_makie(pth);
+#sc = scatter!(p, color=l, marker=d, colormap=:grays)
+#Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
+#Colorbar(fig[end+1, begin], sc, vertical=false);
+#display(fig)
+
+#println("$(A✴(CartesianIndex((1,1)), goal))");
 
 
