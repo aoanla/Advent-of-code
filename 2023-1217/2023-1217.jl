@@ -7,7 +7,7 @@ using DataStructures #I really don't to write my own PriorityQueue
 # (That is: since we have to move 1 orthogonally for every 3 down, at least, paths which are "straight down" actually cost more since we have to go
 #                                                                                                                   3 down, 1 left, 1 right [total cost 5]
 
-d = read("input2");
+d = read("input");
 width = findfirst(==(UInt8('\n')), d);
 matrix = (reshape(d, width, :)[begin:end-1, :]) .- UInt8('0');
 println("$(size(matrix))")
