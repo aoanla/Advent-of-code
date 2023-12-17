@@ -174,6 +174,7 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
                                                 recordframe!(v);
                                                 save("./output2.mp4", v);
+                                                save("./output2.png", fig);
                                                 #println("$(reconstruct_path(prev, cursor))"); 
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                         end 

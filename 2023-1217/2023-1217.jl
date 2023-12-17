@@ -163,7 +163,7 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
                                                 recordframe!(v);
                                                 save("./output.mp4", v);
-
+                                                save("./output.png", fig);
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                             end 
         
