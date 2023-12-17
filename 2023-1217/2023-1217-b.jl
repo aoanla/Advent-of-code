@@ -1,6 +1,7 @@
 #"The A* one, part 2"
 using Pkg
 Pkg.activate(".")
+using GLMakie
 using DataStructures #I really don't to write my own PriorityQueue
 
 #I think A* is probably fine for this, if the heuristic encodes the cost of an overall angle of approach that makes it hard to "alternate directions"
@@ -37,9 +38,9 @@ end
 """ 
 function h(posn::cell_data)
     #improvement - use movehist to tweak this estimate (only really significant for short distances where it matters if we can't move 3 in one dir in one go)
-    return 0 # try with Dijkstra - okay, so the problem isn't h 
+    #return 0 # try with Dijkstra - okay, so the problem isn't h 
     d = goal - posn.c;
-    #return d[1]+d[2]
+    return d[1]+d[2]
     d == CI(0,0) && return 0
     (bigger, smaller) = d[1] > d[2] ? (d[1], d[2]) : (d[2], d[1])
     slope = smaller != 0 ? bigger ÷ smaller : bigger ; 
@@ -82,6 +83,27 @@ function reconstruct_path(prev, cursor)
     totalpath
 end
 
+makie_markers = ['▾', '▴', '▶', '◀']
+#makie_markers = ['▶', '◀', '▾', '▴']
+
+""" path here is an output of reconstruct_path containing cell_data objects
+"""
+function path_to_makie(path)
+    points = (x->Point2f(x.c[1], x.c[2])).(path) 
+    dirs = (x->makie_markers[x.dir]).(path)
+    counts  = (x->x.count).(path)
+    points, dirs, counts
+end
+
+
+function setupplot(#=p,d, l=#)
+    #p, d, l = @lift( $makie_data ) ;
+    fig, ax, hm = heatmap(matrix) ; #the backing matrix
+    #scatter!(p, color=l, marker=d)
+    Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
+    fig 
+end
+
 
 function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
@@ -102,6 +124,22 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
     openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #need to sort out *what* we can use as a priority queue in Julia
 
+    #Makie
+    #pth = Observable{Vector{cell_data}}([s_cell]);
+    fig, ax, hm = heatmap(matrix) ; #the backing matrix 
+    point(x) = Point2f(x.c[1], x.c[2])
+    pts  = Observable(Point2f[point(s_cell)]) #@lift( map(point, $pth)  );
+    dirs = Observable(Char[makie_markers[s_cell.dir]]) #@lift( map(x->makie_markers[x.dir], $pth) );
+    counts = Observable(Int[s_cell.count]) #@lift( map(x->x.count, $pth) );
+    sc = scatter!(pts, color=counts, marker=dirs, colormap=:grays, colorrange=(1,10))
+    Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
+    Colorbar(fig[end+1, begin], sc, vertical=false);
+    v = VideoStream(fig, format="mp4", framerate=60)
+    #Make
+    cc = 0;
+
+
+
     while !isempty(openset)
 
         #note, there's something *screwy* with the documentation for PriorityQueue - 
@@ -110,8 +148,33 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
         # and only gives K not V !
         cursor = dequeue!(openset) #the highest priority (lowest "value") node
         score = fscore[cursor.c][cursor.dir, cursor.count]; 
+
+        cc += 1;
+            #Makie
+            #c[] = cursor ; #update Observable for plot
+            if cc % 50 == 0
+                pth = reconstruct_path(prev, cursor);
+                pts.val = map(point, pth);
+                dirs.val = map(x->makie_markers[x.dir], pth)
+                counts.val = map(x->x.count, pth);
+                notify(pts); notify(dirs); notify(counts);
+
+                recordframe!(v);
+                #sleep(0.05)
+            end
+
+
+
         cursor.c == g #=we got there!=# && begin
-                                                println("$(reconstruct_path(prev, cursor))"); 
+                                                pth = reconstruct_path(prev, cursor);
+                                                pts.val = map(point, pth);
+                                                dirs.val = map(x->makie_markers[x.dir], pth)
+                                                counts.val = map(x->x.count, pth);
+                                                notify(pts); notify(dirs); notify(counts);
+
+                                                recordframe!(v);
+                                                save("./output2.mp4", v);
+                                                #println("$(reconstruct_path(prev, cursor))"); 
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                         end 
         #hist = movehistory[cursor]

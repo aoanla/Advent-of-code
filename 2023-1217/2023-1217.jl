@@ -125,16 +125,13 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     pts  = Observable(Point2f[point(s_cell)]) #@lift( map(point, $pth)  );
     dirs = Observable(Char[makie_markers[s_cell.dir]]) #@lift( map(x->makie_markers[x.dir], $pth) );
     counts = Observable(Int[s_cell.count]) #@lift( map(x->x.count, $pth) );
-    sc = scatter!(pts, color=counts, marker=dirs, colormap=:grays)
+    sc = scatter!(pts, color=counts, marker=dirs, colormap=:grays, colorrange=(1,4))
     Colorbar(fig[:, end+1], hm); #and a colourbar for reference to be fancy
     Colorbar(fig[end+1, begin], sc, vertical=false);
-    display(fig)
-    #display(f);
-    #v = VideoStream(f, format="gif", framerate=24)
+    v = VideoStream(fig, format="mp4", framerate=60)
     #Make
     cc = 0;
-    #record(f, "test.gif") do io
-        while !isempty(openset)
+    while !isempty(openset)
 
             #note, there's something *screwy* with the documentation for PriorityQueue - 
             # Docs claim popfirst! gives the pair K->V 
@@ -144,25 +141,29 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
             cc += 1;
             #Makie
             #c[] = cursor ; #update Observable for plot
-            if cc % 100 == 0
+            if cc % 50 == 0
                 pth = reconstruct_path(prev, cursor);
                 pts.val = map(point, pth);
                 dirs.val = map(x->makie_markers[x.dir], pth)
                 counts.val = map(x->x.count, pth);
                 notify(pts); notify(dirs); notify(counts);
 
-                #recordframe!(v);
-                sleep(0.05)
+                recordframe!(v);
+                #sleep(0.05)
             end
             #Makie
 
             score = fscore[cursor.c][cursor.dir, cursor.count]; 
             cursor.c == g #=we got there!=# && begin
-                                                #save("./output.gif", v);
-                                                #return reconstruct_path(prev, cursor);
-                                                #p,d,l = path_to_makie(pth);
-                                                #scatter!(f, p, color=l, marker=d)
-                                                #println("$(reconstruct_path(prev, cursor))"); 
+                                                pth = reconstruct_path(prev, cursor);
+                                                pts.val = map(point, pth);
+                                                dirs.val = map(x->makie_markers[x.dir], pth)
+                                                counts.val = map(x->x.count, pth);
+                                                notify(pts); notify(dirs); notify(counts);
+
+                                                recordframe!(v);
+                                                save("./output.mp4", v);
+
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                             end 
         
