@@ -56,7 +56,8 @@ possibles = Set(CartesianIndex.([(0,1), (1,0), (0,-1), (-1,0) ]) );
 
 """ return a list of locations accessible from c with its current move history annotation
     - we can't get the node "back" from movehist 
-    - we can't get the node *forward* from movehist if count == 3
+    - we can't get the node *forward* from movehist if count == 10
+    - we can't go any direction *other* than forward if count < 4
     - we can't violate bounds!
 """
 function accessible(c)
