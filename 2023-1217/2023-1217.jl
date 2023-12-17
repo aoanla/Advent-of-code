@@ -13,8 +13,7 @@ matrix = (reshape(d, width, :)[begin:end-1, :]) .- UInt8('0');
 println("$(size(matrix))")
 bounds= size(matrix)
 goal = CartesianIndex(bounds) #that's the last coordinate, so!
-#bounds = bounds(matrix)
-#exp_bounds = vcat([ i for i in bounds ], [4, 3]); #extra dimensions are "direction from" and "amount" 
+
 
 CI(x,y) = CartesianIndex((x,y))
 
@@ -83,19 +82,19 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     prev = Dict{cell_data, cell_data}() #dictionary of previous points
     s_cell = cell_data(s, 1, 1); #count 1 == 0 really (thanks Julia!)
 
+    #state space is [dir, amount] for each [location] - I really want to do this with a sparse DefaultDict or something but those seem slow
     goalscore = [ [typemax(1) for i in 1:4, j in 1:4] for k in 1:bounds[1], l in 1:bounds[2] ]  #cost s -> cell
     goalscore[s][1,1] = 0 #zero cost to not move at all!
 
-    #we need to note where we last entered each node from and now many times we'd done that exact direction 
-    #movehistory = Dict{CartesianIndex{2}, Tuple{CartesianIndex{2}, UInt8}}([s=>(CartesianIndex(0,0), 0)]);
 
-    #fscore = fill(typemax(1), bounds) #f, our heuristic estimate for s->g via cell 
+
+    #not having this around seems to make it slow (even though we only use it to look up score, which is already stored in the PQ)
     fscore = [ [typemax(1) for i in 1:4, j in 1:4] for k in 1:bounds[1], l in 1:bounds[2] ] 
     fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
 
 
 
-    openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #need to sort out *what* we can use as a priority queue in Julia
+    openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #
 
     while !isempty(openset)
 
@@ -109,7 +108,7 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
                                                 println("$(reconstruct_path(prev, cursor))"); 
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                         end 
-        #hist = movehistory[cursor]
+        
         #evaluate neighbours of cursor = which means we need to store the direction we entered cursor from and how long we'd been moving in that direction
         for i in accessible(cursor)
             di = dir_to_num[i]
@@ -118,13 +117,11 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
             if trialgoalscore < goalscore[cand.c][di, cand.count]
                 prev[cand] = cursor 
                 goalscore[cand.c][di,cand.count] = trialgoalscore
-                #movehistory[cand] = i == hist[1] ? (i, hist[2]+1) : (i, 1)  #accrue straight lines - it's okay for this to change if cand leaves and re-enters the open set
+                
                 fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
-                #if haskey[openset] #update priority (which *can* change here I think!)
-                #    openset cand priority = fscore[cand]
-                #else 
+ 
                 openset[cand] = fscore[cand.c][di,cand.count]
-                #end
+                
             end
         end
     end 
