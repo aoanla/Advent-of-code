@@ -93,15 +93,6 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     goalscore = DefaultDict{cell_data, Int}(typemax(1))
     goalscore[s_cell] =0; 
 
-    #we need to note where we last entered each node from and now many times we'd done that exact direction 
-    #movehistory = Dict{CartesianIndex{2}, Tuple{CartesianIndex{2}, UInt8}}([s=>(CartesianIndex(0,0), 0)]);
-
-    #fscore = fill(typemax(1), bounds) #f, our heuristic estimate for s->g via cell 
-    #fscore = [ [typemax(1) for i in 1:4, j in 1:max_c] for k in 1:bounds[1], l in 1:bounds[2] ] 
-    #fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
-    #fscore = DefaultDict(typemax(1), [s_cell => h(s_cell)])
-
-
     openset = PriorityQueue{cell_data, Int}(s_cell => h(s_cell) ) #need to sort out *what* we can use as a priority queue in Julia
 
     while !isempty(openset)

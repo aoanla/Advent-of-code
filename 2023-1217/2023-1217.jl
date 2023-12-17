@@ -89,13 +89,7 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     #we need to note where we last entered each node from and now many times we'd done that exact direction 
     #movehistory = Dict{CartesianIndex{2}, Tuple{CartesianIndex{2}, UInt8}}([s=>(CartesianIndex(0,0), 0)]);
 
-    #fscore = fill(typemax(1), bounds) #f, our heuristic estimate for s->g via cell 
-    fscore = [ [typemax(1) for i in 1:4, j in 1:4] for k in 1:bounds[1], l in 1:bounds[2] ] 
-    fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
-
-
-
-    openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #need to sort out *what* we can use as a priority queue in Julia
+    openset = PriorityQueue{cell_data, Int}(s_cell =>h(s_cell)  ) #need to sort out *what* we can use as a priority queue in Julia
 
     while !isempty(openset)
 
@@ -103,8 +97,8 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
         # Docs claim popfirst! gives the pair K->V 
         # Julia claims popfirst! is not implemented for PriorityQueue [at least a v0.18.15] and I need to use dequeue! (which is supposed to be deprecate)
         # and only gives K not V !
-        cursor = dequeue!(openset) #the highest priority (lowest "value") node
-        score = fscore[cursor.c][cursor.dir, cursor.count]; 
+        cursor, score = first(openset)
+        dequeue!(openset) #the highest priority (lowest "value") node
         cursor.c == g #=we got there!=# && begin
                                                 println("$(reconstruct_path(prev, cursor))"); 
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
@@ -119,11 +113,11 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
                 prev[cand] = cursor 
                 goalscore[cand.c][di,cand.count] = trialgoalscore
                 #movehistory[cand] = i == hist[1] ? (i, hist[2]+1) : (i, 1)  #accrue straight lines - it's okay for this to change if cand leaves and re-enters the open set
-                fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
+                #fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
                 #if haskey[openset] #update priority (which *can* change here I think!)
                 #    openset cand priority = fscore[cand]
                 #else 
-                openset[cand] = fscore[cand.c][di,cand.count]
+                openset[cand] = trialgoalscore + h(cand)
                 #end
             end
         end
