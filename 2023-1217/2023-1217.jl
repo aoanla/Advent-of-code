@@ -23,7 +23,7 @@ goal = CartesianIndex(bounds) #that's the last coordinate, so!
 """ 
 function h(posn::CartesianIndex{2}, movehist::Tuple{CartesianIndex{2}, UInt8})
     #improvement - use movehist to tweak this estimate (only really significant for short distances where it matters if we can't move 3 in one dir in one go)
-    return 0 # try with Dijkstra
+    return 0 # try with Dijkstra - okay, so the problem isn't h 
     d = goal - posn
     #return d[1]+d[2]
     d == CartesianIndex((0,0)) && return 0
