@@ -31,14 +31,18 @@ function safepush!(dict, key, value)
     end
 end
 
+#checks - are we parsing the whole file (we are)
+
 function read_instructions(f)
     instructions = []
     rowcol = [1,1]
+    c = 0
     open(f) do fd
         for l in readlines(fd)
             _, _, colour = split(l, ' ');
             dir = colour[end-1];
             l = parse(Int, "0x" * colour[begin+2:end-2])
+
             #0 R 1 D 2 L 3 U
             select = ( dir == '2' || dir == '0' ) ? COL : ROW   #COL now is "COLranges" stored in ROW hash
             nselect = 3 - select; #2 if 1, 1 if 2 
@@ -47,10 +51,10 @@ function read_instructions(f)
             new = rowcol[select] + step*l
             safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select],new) : (new,rowcol[select]) ) 
             rowcol[select] = new
+            c += 1
         end
     end
-
-
+    println("Total input size = $c")
     depths = sort(collect(keys(rowscols[ROW])));
 
     insidespace = 0
@@ -88,6 +92,7 @@ function read_instructions(f)
                     break
                 end
                 if r[1] == i[2] #extends to the bottom  - this needs to go on the *new* ranges list, with a depth of k, for any subsequent inside ranges to glom
+                            #TESTED by example
                     match = true
                     new_range = (i[1], r[2], k)
                     insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
@@ -95,7 +100,7 @@ function read_instructions(f)
                     pushfirst!(inside_ranges, new_range)
                     break
                 end
-                if r[1] > i[1] && r[2] < i[2] #is wholly included within
+                if r[1] > i[1] && r[2] < i[2] #is wholly included within  - TESTED by example 
                     match = true
                     new_range = [(i[1], r[1], k), (r[2], i[2], k)]
 
@@ -109,7 +114,7 @@ function read_instructions(f)
                 end
                 if r[1] == i[1] #shrinks us from the top                    
                     match = true 
-                    if r[2] == i[2] #actually caps us, just need to fiddle the range to get it okay
+                    if r[2] == i[2] #actually caps us, just need to fiddle the range to get it okay SPECIAL CASE TESTED by example
  
                         new_range = (i[1], i[2], k)
                         insidespace += (i[2] - i[1] + 1) * (k - i[3] + 1) #*up to* this range, inc cap
@@ -150,9 +155,15 @@ function read_instructions(f)
         inside_ranges = deepcopy(next_ranges)
     
     end #depths iter
-
+    println("Remaining ranges: $inside_ranges")
+    excess = 0
+    for i in inside_ranges
+        excess += i[2] - i[1] +1 
+    end
+    println("Potential excess = $excess")
     insidespace
 end
+#answer from another solution is 45757884535661 (we get about half this, despite our test example passing perfectly)
 
 println("$(read_instructions("input"))")
 
