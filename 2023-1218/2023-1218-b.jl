@@ -58,6 +58,11 @@ function read_instructions(f)
     #colrange @ row - add width, determine interior parity by rowranges that start and end at the col limits 
     #rowranges @ cols - determine which rowranges we intersect (ordered by cols) to do parity
 
+    #... this is easier than that because you can just ignore the colranges by row [as the rowranges by cols all have them as limits]
+    # in which case this is just adding oriented areas of rectangles from each range
+
+
+
     #pt1 below
 
 
@@ -97,10 +102,9 @@ function read_instructions(f)
         end
         insidespace += 1 #last element
     end
-    image_and_wait(Gray.(space) )
-    println("$(count(space))")
+
     insidespace
 end
 
-println("$(read_instructions("input"))")
+println("$(read_instructions("input2"))")
 
