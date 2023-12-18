@@ -12,7 +12,7 @@
 #we always start with a single filled element, we'll call that 1,1
 #the vector of ints is the column indices for all filled elements in a given row
             #    rows dict with set of col ranges          cols dict with set of row ranges
-rowscols = ( Dict{Int, Set{Range{Int}}}([]), Dict{Int, Set{Range{Int}}}([]) )
+rowscols = ( Dict{Int, Set{Tuple{Int,Int}}}([]), Dict{Int, Set{Tuple{Int,Int}}}([]) )
 #same here, for row indices in the vector for a given col
 #cols = Dict{Int, Vector{Int}}([ 1=>[1]])
 
@@ -27,7 +27,7 @@ function safepush!(dict, key, value)
             push!(dict[key], value)
         end
     else
-        dict[key] = Set(value)
+        dict[key] = Set([value])
     end
 end
 
@@ -37,15 +37,16 @@ function read_instructions(f)
     open(f) do fd
         for l in readlines(fd)
             _, _, colour = split(l, ' ');
-            dist = colour[end];
-            l = parse(Int, "0x" * colour[begin+1:end-1])
+            dir = colour[end-1];
+            l = parse(Int, "0x" * colour[begin+2:end-2])
+            println("$dir $l $colour")
             #0 R 1 D 2 L 3 U
             select = ( dir == '2' || dir == '0' ) ? COL : ROW   #COL now is "COLranges" stored in ROW hash
             nselect = 3 - select; #2 if 1, 1 if 2 
             step = ( dir == '3' || dir == '2' ) ? -1 : 1
 
             new = rowcol[select] + step*l
-            safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select]:new) : (new:rowcol[select]) ) 
+            safepush!(rowscols[nselect], rowcol[nselect], (rowcol[select], new) ) 
             rowcol[select] = new
         end
     end
@@ -60,50 +61,22 @@ function read_instructions(f)
 
     #... this is easier than that because you can just ignore the colranges by row [as the rowranges by cols all have them as limits]
     # in which case this is just adding oriented areas of rectangles from each range
-
-
-
-    #pt1 below
-
-
-    #or is it? Am I just missing the case that a cell is passed over more than once above [and so counts as not "opening" the space, just making an inclusion with width stem attaching it to the outside?]
-    #.... I'm also missing the same thing from Day 10 
-    #               #                                1
-    #      1  #######  0    is different to  1  ##########   1
-    #         #                                 #    0   #
-
+    min_k = minimum(collect(keys(rowscols[ROW])));
     insidespace = 0
-    for (k,v) in pairs(rowscols[ROW])
-        insidesets = collect(sort(unique(v))) #pairs of walls contain "internal space"
-
-        #insidespace += mapreduce(x->x[2]-x[1]+1, +, insidesets)
-        parity = false
-        lastel = length(insidesets)
-        i = 1
-        while i < lastel
-            insidespace += 1  #an element always counts to the size
-            if insidesets[i+1] == insidesets[i] + 1 #we're running along a wall // to our direction
-                #need to determine if this is the end of a loop, or a jink in a vertical
-                up = haskey(rowscols[ROW], k-1) && insidesets[i] ∈ rowscols[ROW][k-1] ; #is the start of our horizontal run attached to a cell above it
-                while (i < lastel - 1)  && insidesets[i+1] == insidesets[i] + 1
-                    i+=1
-                    insidespace += 1
-                end
-                up2 = haskey(rowscols[ROW], k-1) && insidesets[i] ∈ rowscols[ROW][k-1];
-                parity = parity ⊻ (up ⊻ up2 ) #? parity : 1 - parity #flip parity if this is *not* a loop
-                insidespace += parity * (insidesets[i+1] - insidesets[i] -1)
-                space[k-min_rows+1, (insidesets[i]-min_cols+1):(insidesets[i+1]-min_cols+1)] .|= parity;
-            else
-                parity = true ⊻ parity
-                insidespace += parity * (insidesets[i+1] - insidesets[i] -1)
-                space[k-min_rows+1, (insidesets[i]-min_cols+1):(insidesets[i+1]-min_cols+1)] .|= parity;
-            end
-            i += 1
+    error = 0
+    for (k,v) in rowscols[ROW]
+        for vv in collect(unique(v))
+            dist = vv[1]-vv[2]
+            oriented_area = (k ) * (dist); #pick a direction as positive, I think we go down first on the outside so...
+            error += (k) * sign(vv[1]-vv[2]) 
+            insidespace += oriented_area;
         end
-        insidespace += 1 #last element
     end
+    println("$error")
+    insidespace - 952408144115
 
-    insidespace
+
+    
 end
 
 println("$(read_instructions("input2"))")
