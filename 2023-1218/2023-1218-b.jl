@@ -12,7 +12,7 @@
 #we always start with a single filled element, we'll call that 1,1
 #the vector of ints is the column indices for all filled elements in a given row
             #    rows dict with set of col ranges          cols dict with set of row ranges
-rowscols = ( Dict{Int, Set{Range{Int}}}([]), Dict{Int, Set{Range{Int}}}([]) )
+rowscols = ( Dict{Int, Set{Tuple{Int,Int}}}([]), Dict{Int, Set{Tuple{Int,Int}}}([]) )
 #same here, for row indices in the vector for a given col
 #cols = Dict{Int, Vector{Int}}([ 1=>[1]])
 
@@ -27,7 +27,7 @@ function safepush!(dict, key, value)
             push!(dict[key], value)
         end
     else
-        dict[key] = Set(value)
+        dict[key] = Set([value])
     end
 end
 
@@ -37,74 +37,122 @@ function read_instructions(f)
     open(f) do fd
         for l in readlines(fd)
             _, _, colour = split(l, ' ');
-            dist = colour[end];
-            l = parse(Int, "0x" * colour[begin+1:end-1])
+            dir = colour[end-1];
+            l = parse(Int, "0x" * colour[begin+2:end-2])
             #0 R 1 D 2 L 3 U
             select = ( dir == '2' || dir == '0' ) ? COL : ROW   #COL now is "COLranges" stored in ROW hash
             nselect = 3 - select; #2 if 1, 1 if 2 
             step = ( dir == '3' || dir == '2' ) ? -1 : 1
 
             new = rowcol[select] + step*l
-            safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select]:new) : (new:rowcol[select]) ) 
+            safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select],new) : (new,rowcol[select]) ) 
             rowcol[select] = new
         end
     end
 
-    #raycasting, lets just pick rows to do this over
 
-    #PT2 note - this is now going to be raycasting through ranges.
-    #trick will be:
-
-    #colrange @ row - add width, determine interior parity by rowranges that start and end at the col limits 
-    #rowranges @ cols - determine which rowranges we intersect (ordered by cols) to do parity
-
-    #... this is easier than that because you can just ignore the colranges by row [as the rowranges by cols all have them as limits]
-    # in which case this is just adding oriented areas of rectangles from each range
-
-
-
-    #pt1 below
-
-
-    #or is it? Am I just missing the case that a cell is passed over more than once above [and so counts as not "opening" the space, just making an inclusion with width stem attaching it to the outside?]
-    #.... I'm also missing the same thing from Day 10 
-    #               #                                1
-    #      1  #######  0    is different to  1  ##########   1
-    #         #                                 #    0   #
+    depths = sort(collect(keys(rowscols[ROW])));
 
     insidespace = 0
-    for (k,v) in pairs(rowscols[ROW])
-        insidesets = collect(sort(unique(v))) #pairs of walls contain "internal space"
+    inside_ranges = Tuple{Int, Int, Int}[]
+    for k in depths
+        new_ranges = collect(sort(unique(rowscols[ROW][k]))) #pairs of walls contain "internal space"
+        #print number of ranges, which we assume is 1
 
-        #insidespace += mapreduce(x->x[2]-x[1]+1, +, insidesets)
-        parity = false
-        lastel = length(insidesets)
-        i = 1
-        while i < lastel
-            insidespace += 1  #an element always counts to the size
-            if insidesets[i+1] == insidesets[i] + 1 #we're running along a wall // to our direction
-                #need to determine if this is the end of a loop, or a jink in a vertical
-                up = haskey(rowscols[ROW], k-1) && insidesets[i] ∈ rowscols[ROW][k-1] ; #is the start of our horizontal run attached to a cell above it
-                while (i < lastel - 1)  && insidesets[i+1] == insidesets[i] + 1
-                    i+=1
-                    insidespace += 1
+        #continue
+        next_ranges = Tuple{Int, Int, Int}[]
+        past_it = false
+        while !isempty(new_ranges)
+            if past_it == true
+                #glom the rest of new_ranges onto the end of next_ranges
+                for n in new_ranges
+                    push!(next_ranges, (n[1], n[2], k))
                 end
-                up2 = haskey(rowscols[ROW], k-1) && insidesets[i] ∈ rowscols[ROW][k-1];
-                parity = parity ⊻ (up ⊻ up2 ) #? parity : 1 - parity #flip parity if this is *not* a loop
-                insidespace += parity * (insidesets[i+1] - insidesets[i] -1)
-                space[k-min_rows+1, (insidesets[i]-min_cols+1):(insidesets[i+1]-min_cols+1)] .|= parity;
-            else
-                parity = true ⊻ parity
-                insidespace += parity * (insidesets[i+1] - insidesets[i] -1)
-                space[k-min_rows+1, (insidesets[i]-min_cols+1):(insidesets[i+1]-min_cols+1)] .|= parity;
+                break
             end
-            i += 1
+            r = popfirst!(new_ranges)
+            match = false
+            while !isempty(inside_ranges)
+                i = popfirst!(inside_ranges)
+                if i[1] > r[2] #not in range - this new range is *before* this range [and thus needs to go in the next_ranges list now]
+                    push!(next_ranges, (r[1], r[2], k))
+                    pushfirst!(inside_ranges, i) #pop this back onto the list for the next new candidate
+                    break
+                end
+                if r[2] == i[1] #extends to the top - this needs to go on the *inside* ranges, with a depth of k, for any subsequent new ranges to glom
+                    match = true
+                    new_range = (r[1], i[2], k) 
+                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
+
+                    pushfirst!(inside_ranges, new_range);
+                    break
+                end
+                if r[1] == i[2] #extends to the bottom  - this needs to go on the *new* ranges list, with a depth of k, for any subsequent inside ranges to glom
+                    match = true
+                    new_range = (i[1], r[2], k)
+                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
+
+                    pushfirst!(inside_ranges, new_range)
+                    break
+                end
+                if r[1] > i[1] && r[2] < i[2] #is wholly included within
+                    match = true
+                    new_range = [(i[1], r[1], k), (r[2], i[2], k)]
+
+                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range - this is the Interior!
+                    insidespace += (r[2] - r[1] - 1) #interior nub
+                    push!(next_ranges, new_range[1]) #the top goes to next ranges because it can't match anything new
+   
+                    pushfirst!(inside_ranges, new_range[2]) #the bottom goes to inside_ranges because it could match another segment at the bottom
+    
+                    break 
+                end
+                if r[1] == i[1] #shrinks us from the top                    
+                    match = true 
+                    if r[2] == i[2] #actually caps us, just need to fiddle the range to get it okay
+ 
+                        new_range = (i[1], i[2], k)
+                        insidespace += (i[2] - i[1] + 1) * (k - i[3] + 1) #*up to* this range, inc cap
+                        push!(next_ranges, new_range); 
+                        break
+                    end
+                    new_range = (r[2], i[2], k)
+                    insidespace += (i[2] - i[1] +1 ) * (k - i[3] ) #*up to* this range 
+                    insidespace += (r[2] - r[1] ) #top cap
+
+                    push!(next_ranges, new_range)
+                    break
+                end 
+                if r[2] == i[2] #shrinks us from the bottom
+                    match = true
+                    new_range = (i[1], r[1], k)
+                    insidespace += (i[2] - i[1] + 1 ) * (k - i[3] ) #*up to* this range 
+                    insidespace += (r[2] - r[1] ) #bottom cap
+    
+                    push!(next_ranges, new_range)
+                    break
+                end
+                if r[1] > i[2] #we're past the end of the ranges we could match - and all subsequent new ranges will be even further past
+
+                    push!(next_ranges, i); #so this range goes onto next_ranges
+                    #pushfirst!(next_ranges)
+                end
+            end 
+
+            #if our range is past all ranges in the inside_ranges, add it to the list 
+            if match != true
+                push!(next_ranges, (r[1], r[2], k))
+                past_it = true; #and signal that everything else is as well at this point
+            end
         end
-        insidespace += 1 #last element
-    end
+        #if we get to here then only inside_ranges can have things in it (if all our new ranges were above them )
+        append!(next_ranges, inside_ranges)
+        inside_ranges = deepcopy(next_ranges)
+    
+    end #depths iter
 
     insidespace
 end
 
-println("$(read_instructions("input2"))")
+println("$(read_instructions("input"))")
 
