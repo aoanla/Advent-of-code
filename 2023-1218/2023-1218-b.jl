@@ -1,6 +1,8 @@
-using Pkg
-Pkg.activate(".")
-using Images, ImageView, Gtk4, Colors
+#Part B where we store ranges in rows and cols and have to intersect them
+
+#using Pkg
+#Pkg.activate(".")
+#using Images, ImageView, Gtk4, Colors
 
 #Probably should use some sparse data structures to hold this
 # row and column dicts containing a stack of the elements in each of them?
@@ -9,38 +11,13 @@ using Images, ImageView, Gtk4, Colors
 
 #we always start with a single filled element, we'll call that 1,1
 #the vector of ints is the column indices for all filled elements in a given row
-            #    rows dict with set of cols          cols dict with set of rows
-rowscols = ( Dict{Int, Set{Int}}([ 1=>Set(1)]), Dict{Int, Set{Int}}([ 1=>Set(1)]) )
+            #    rows dict with set of col ranges          cols dict with set of row ranges
+rowscols = ( Dict{Int, Set{Range{Int}}}([]), Dict{Int, Set{Range{Int}}}([]) )
 #same here, for row indices in the vector for a given col
 #cols = Dict{Int, Vector{Int}}([ 1=>[1]])
 
 ROW = 1
 COL = 2
-
-function image_and_wait(img)
-    guidict = imshow(img);
-    #If we are not in a REPL
-    if (!isinteractive())
-        # Create a condition object
-        c = Condition()
-
-        # Get the window
-        win = guidict["gui"]["window"]
-    
-        # Start the GLib main loop
-        @async Gtk4.GLib.glib_main()
-
-        # Notify the condition object when the window closes
-        signal_connect(win, :close_request) do widget
-            notify(c)
-        end
-        # Wait for the notification before proceeding ...
-        wait(c)
-    end
-end
-
-
-
 
 function safepush!(dict, key, value)
     if haskey(dict, key)
@@ -59,43 +36,31 @@ function read_instructions(f)
     rowcol = [1,1]
     open(f) do fd
         for l in readlines(fd)
-            dir, n, colour = split(l, ' ');
-            dist = parse(Int, n);
-            select = ( dir == "L" || dir == "R" ) ? COL : ROW
+            _, _, colour = split(l, ' ');
+            dist = colour[end];
+            l = parse(Int, "0x" * colour[begin+1:end-1])
+            #0 R 1 D 2 L 3 U
+            select = ( dir == '2' || dir == '0' ) ? COL : ROW   #COL now is "COLranges" stored in ROW hash
             nselect = 3 - select; #2 if 1, 1 if 2 
-            step = ( dir == "U" || dir == "L" ) ? -1 : 1
+            step = ( dir == '3' || dir == '2' ) ? -1 : 1
 
-            for i in 1:dist
-                rowcol[select] += step
-                #update new entries, dict side first
-                safepush!(rowscols[select], rowcol[select], rowcol[nselect])
-                safepush!(rowscols[nselect], rowcol[nselect], rowcol[select])
-            end
+            new = rowcol[select] + step*l
+            safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select]:new) : (new:rowcol[select]) ) 
+            rowcol[select] = new
         end
     end
-
-    #visualisation 
-    s_rows = sort(collect(keys(rowscols[ROW])))
-    max_rows = maximum(s_rows)
-    min_rows = minimum(s_rows)
-    range_rows = max_rows - min_rows + 1; 
-    s_cols = sort(collect(keys(rowscols[COL])))
-    max_cols = maximum(s_cols)
-    min_cols = minimum(s_cols)
-    range_cols = max_cols - min_cols + 1; 
-    space = falses(range_rows,range_cols);
-    for (k,v) in pairs(rowscols[ROW])
-        for i in unique(v)
-            space[k-min_rows+1, i-min_cols+1] = true
-        end
-    end
-
-    image_and_wait(Gray.(space) )
-
-    
 
     #raycasting, lets just pick rows to do this over
-    
+
+    #PT2 note - this is now going to be raycasting through ranges.
+    #trick will be:
+
+    #colrange @ row - add width, determine interior parity by rowranges that start and end at the col limits 
+    #rowranges @ cols - determine which rowranges we intersect (ordered by cols) to do parity
+
+    #pt1 below
+
+
     #or is it? Am I just missing the case that a cell is passed over more than once above [and so counts as not "opening" the space, just making an inclusion with width stem attaching it to the outside?]
     #.... I'm also missing the same thing from Day 10 
     #               #                                1
