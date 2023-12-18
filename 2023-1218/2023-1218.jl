@@ -15,7 +15,11 @@ COL = 2
 
 function safepush!(dict, key, value)
     if haskey(dict, key)
-        push!(dict[key], value)
+        if value ∈ dict[key] #trying some fancy ordering to "remove" cells we pass over more than once to help our interior detecting raycaster not the problem
+            delete!(dict[key], value)
+        else
+            push!(dict[key], value)
+        end
     else
         dict[key] = Set(value)
     end
@@ -42,9 +46,11 @@ function read_instructions(f)
     end
     #raycasting, lets just pick rows to do this over
     
+    
     #not sufficient = we need the hull [the path can include interior elements that are "pinched off"]
+    #or is it? Am I just missing the case that a cell is passed over more than once above [and so counts as not "opening" the space, just making an inclusion with width stem attaching it to the outside?]
     insidespace = 0
-
+#=
     ordered_rows = sort(keys(rowscols[ROW])); #to do this properly we need to scan in order down the rows and update our "interior" ranges 
 
     #initial ranges of "interior" are the ranges of consecutive tiles 
@@ -76,6 +82,8 @@ function read_instructions(f)
         #and reduce to update insidespace
         insidespace += sumranges(ranges)
     end
+    =#
+
 
         #old from here
     for (k,v) in pairs(rowscols[ROW])
