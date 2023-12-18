@@ -67,12 +67,18 @@ function read_instructions(f)
     for (k,v) in rowscols[ROW]
         for vv in collect(unique(v))
             dist = vv[1]-vv[2]
-            oriented_area = (k ) * (dist); #pick a direction as positive, I think we go down first on the outside so...
+            oriented_area = (k ) * (dist + 1) # + sign(dist)); #pick a direction as positive, I think we go down first on the outside so...
             error += (k) * sign(vv[1]-vv[2]) 
             insidespace += oriented_area;
         end
     end
-    println("$error")
+    rowsacc =0
+    for (k, v) in rowscols[COL]
+        for vv in collect(unique(v))
+            rowsacc += (abs(vv[1]-vv[2]) +1) 
+        end
+    end
+    println("$rowsacc")
     insidespace - 952408144115
 
 

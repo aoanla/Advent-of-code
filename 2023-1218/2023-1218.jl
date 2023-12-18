@@ -1,6 +1,6 @@
-using Pkg
-Pkg.activate(".")
-using Images, ImageView, Gtk4, Colors
+#using Pkg
+#Pkg.activate(".")
+#using Images, ImageView, Gtk4, Colors
 
 #Probably should use some sparse data structures to hold this
 # row and column dicts containing a stack of the elements in each of them?
@@ -17,6 +17,7 @@ rowscols = ( Dict{Int, Set{Int}}([ 1=>Set(1)]), Dict{Int, Set{Int}}([ 1=>Set(1)]
 ROW = 1
 COL = 2
 
+#=
 function image_and_wait(img)
     guidict = imshow(img);
     #If we are not in a REPL
@@ -39,7 +40,7 @@ function image_and_wait(img)
     end
 end
 
-
+=#
 
 
 function safepush!(dict, key, value)
@@ -90,7 +91,7 @@ function read_instructions(f)
         end
     end
 
-    image_and_wait(Gray.(space) )
+    #image_and_wait(Gray.(space) )
 
     
 
@@ -132,10 +133,10 @@ function read_instructions(f)
         end
         insidespace += 1 #last element
     end
-    image_and_wait(Gray.(space) )
+    #image_and_wait(Gray.(space) )
     println("$(count(space))")
     insidespace
 end
 
-println("$(read_instructions("input"))")
+println("$(read_instructions("input3"))")
 
