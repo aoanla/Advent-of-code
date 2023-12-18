@@ -69,7 +69,7 @@ function read_instructions(f)
                         if step > 0 && last_row_step > 0 
                         #println("overlap $(last_row_step * step)")
                             println("1")
-                            accum -= last_row_size;
+                            #accum -= last_row_size;
                             #if step is -ve and row_step is -ve then all is well
                             #if step is +ve and row_step is +ve then all is well 
                             #if step is -ve and row_step is -ve then we undercounted by row_size
@@ -82,7 +82,7 @@ function read_instructions(f)
                         if step < 0 && last_row_step > 0
                             println("3")
 
-                            accum -= +last_row_size #(rowcol[nselect+1]- last_row_size )
+                            #accum -= +last_row_size #(rowcol[nselect+1]- last_row_size )
                             #curr step is +ve (last step was -ve) and row_step is -ve then, we've undercounted by last_row_size ?
                         elseif step > 0 && last_row_step < 0
                             println("4")
@@ -112,7 +112,7 @@ function read_instructions(f)
 
             accum += 1 - rowcol[1]
         end 
-        #accum += last_row_size;
+        accum += last_row_size +1;
     end
 
     #PT2 note - this is now going to be raycasting through ranges.
