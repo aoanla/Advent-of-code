@@ -44,6 +44,40 @@ function read_instructions(f)
     
     #not sufficient = we need the hull [the path can include interior elements that are "pinched off"]
     insidespace = 0
+
+    ordered_rows = sort(keys(rowscols[ROW])); #to do this properly we need to scan in order down the rows and update our "interior" ranges 
+
+    #initial ranges of "interior" are the ranges of consecutive tiles 
+    ranges = Tuple{Int, Int}[]
+    ordered_cols =  sort(unique(rowscols[ROW][ordered_rows[1]])) #the ordered set of columns
+    i = 1
+    #list of ranges for the start
+    while i < length(ordered_cols)
+        #get range of consecutives
+        rstart = ordered_cols[i]
+        while (i < length(ordered_cols) ) && (ordered_cols[i+1] == ordered_cols[i] + 1) #are we going to miss the final cell here?
+            i++
+        end
+        push!(ranges, (rstart, ordered_cols[i]))
+    end
+    
+    function sumranges(r)
+        mapreduce(x->x[2]-x[1]+1, +, r)
+    end
+
+    insidespace += sumranges(ranges); #add the top row to our interior space 
+
+    #iterate down, adjusting the ranges to what we encounter next (verts extending a range down 1 are fine, but we could have horz shrink or grow a range)
+    for k in ordered_rows[2:end]
+        #new ranges
+        ordered_cols =  sort(unique(rowscols[ROW][k])) #the ordered set of columns
+        # ranges list is *sorted* which helps [and we've written range coalescence code in an early Day...]
+
+        #and reduce to update insidespace
+        insidespace += sumranges(ranges)
+    end
+
+        #old from here
     for (k,v) in pairs(rowscols[ROW])
         insidesets = collect(sort(unique(v))) #pairs of walls contain "internal space"
 
