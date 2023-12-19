@@ -43,13 +43,6 @@ function read_instructions(f)
     rowcol = [1,1]
     c = 0
     open(f) do fd
-        last_col_step = 0; #we'll need to fix the "overlap on the last -> first"  at the end
-        first = true
-        first_col_step = 0
-        last_row_step = 0;
-        last_row_size = 0;
-        first_row = 1 #first row position actually *is* 1
-        last_row = 1 #fixed up by loop
         for l in readlines(fd)
             _, _, colour = split(l, ' ');
             dir = colour[end-1];
@@ -58,15 +51,11 @@ function read_instructions(f)
             select = ( dir == '2' || dir == '0' )    #COL now is "COLranges" stored in ROW hash
             nselect = !select; #2 if 1, 1 if 2 
             step = ( dir == '3' || dir == '2' ) ? -1 : 1
-            if first && select
-                first_col_step = step #grab this for sorting out at the end
-                first = false
-            end
 #we need an ordered list of oriented rects to sort out the double counting at borders where both rects have same sign, so just do it here
 
-            new = rowcol[select] + step*l
-            safepush!(rowscols[nselect], rowcol[nselect], step == 1 ? (rowcol[select],new) : (new,rowcol[select]) ) 
-            rowcol[select] = new
+            new = rowcol[select+1] + step*l
+            safepush!(rowscols[nselect+1], rowcol[nselect+1], step == 1 ? (rowcol[select+1],new) : (new,rowcol[select+1]) ) 
+            rowcol[select+1] = new
             c += 1
         end
     end
