@@ -121,7 +121,7 @@ function read_instructions(f)
  
                         new_range = (i[1], i[2], k)
                         insidespace += (i[2] - i[1] + 1) * (k - i[3] + 1) #*up to* this range, inc cap
-                        push!(next_ranges, new_range); 
+                        #push!(next_ranges, new_range); 
                         break
                     end
                     new_range = (r[2], i[2], k)
