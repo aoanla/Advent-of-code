@@ -33,6 +33,12 @@ end
 
 #checks - are we parsing the whole file (we are)
 
+function validate_range(r)
+    r[1]<r[2] && return true
+    println("INVALID RANGE: $r")
+    exit()
+end
+
 function read_instructions(f)
     instructions = []
     rowcol = [1,1]
@@ -61,9 +67,6 @@ function read_instructions(f)
     inside_ranges = Tuple{Int, Int, Int}[]
     for k in depths
         new_ranges = collect(sort(unique(rowscols[ROW][k]))) #pairs of walls contain "internal space"
-        #print number of ranges, which we assume is 1
-        println("$(length(inside_ranges))")
-        #continue
         next_ranges = Tuple{Int, Int, Int}[]
         past_it = false
         while !isempty(new_ranges)
@@ -78,35 +81,46 @@ function read_instructions(f)
             match = false
             while !isempty(inside_ranges)
                 i = popfirst!(inside_ranges)
-                #are these all the possible cases, exhaustively?
-                #definitely missing something - ranges should coalesce at some points down to 2 or 3 or 1 and these just grow almost monotonically from 1 to 57 (which is
-                #definitely not true - the start and end in all directions are only 1 to 3 ranges max)
-                if i[1] > r[2] #not in range - this new range is *before* this range [and thus needs to go in the next_ranges list now]
+                #are these all the possible cases, exhaustively? YES - rs cannot contain is due to ordering and connected path
+
+                if i[1] > r[2] #not in range - r is before i [so must be before all other is too, as is are sorted]
+                    match=true #because we were consumed
                     push!(next_ranges, (r[1], r[2], k))
                     pushfirst!(inside_ranges, i) #pop this back onto the list for the next new candidate
                     break
                 end
-                if r[2] == i[1] #extends to the top - this needs to go on the *inside* ranges, with a depth of k, for any subsequent new ranges to glom
-                    match = true
-                    new_range = (r[1], i[2], k) 
-                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
-
-                    pushfirst!(inside_ranges, new_range);
-                    break
-                end
                 if r[1] == i[2] #extends to the bottom  - this needs to go on the *new* ranges list, with a depth of k, for any subsequent inside ranges to glom
-                            #TESTED by example
+                    #TESTED by example  ??
                     match = true
-                    new_range = (i[1], r[2], k)
-                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
+                    new_range = (i[1], r[2])
+                    validate_range(new_range)
+                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range  is this a good calc if we're throwing back into new_ranges?
+                    pushfirst!(new_ranges, new_range)
+                    #pushfirst!(_ranges, new_range)
+                break
+                end
 
-                    pushfirst!(inside_ranges, new_range)
+                if r[2] == i[2] #shrinks us from the bottom
+                    match = true
+                    if r[1] == i[1] #actually caps us, just need to fiddle the range to get it okay SPECIAL CASE TESTED by example
+                        new_range = (i[1], i[2], k)
+                        insidespace += (i[2] - i[1] + 1) * (k - i[3] + 1) #*up to* this range, inc cap, as we're removing this range entirely
+                        #push!(next_ranges, new_range); #remove entirely
+                        break
+                    end
+                    new_range = (i[1], r[1], k)
+                    validate_range(new_range)
+                    insidespace += (i[2] - i[1] + 1 ) * (k - i[3] ) #*up to* this range 
+                    insidespace += (r[2] - r[1] ) #bottom cap
+                    push!(next_ranges, new_range)
                     break
                 end
                 if r[1] > i[1] && r[2] < i[2] #is wholly included within  - TESTED by example 
                     match = true
                     new_range = [(i[1], r[1], k), (r[2], i[2], k)]
-
+                    for r in new_range
+                        validate_range(new_range)
+                    end
                     insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range - this is the Interior!
                     insidespace += (r[2] - r[1] - 1) #interior nub
                     push!(next_ranges, new_range[1]) #the top goes to next ranges because it can't match anything new
@@ -117,37 +131,28 @@ function read_instructions(f)
                 end
                 if r[1] == i[1] #shrinks us from the top                    
                     match = true 
-                    if r[2] == i[2] #actually caps us, just need to fiddle the range to get it okay SPECIAL CASE TESTED by example
- 
-                        new_range = (i[1], i[2], k)
-                        insidespace += (i[2] - i[1] + 1) * (k - i[3] + 1) #*up to* this range, inc cap
-                        #push!(next_ranges, new_range); 
-                        break
-                    end
                     new_range = (r[2], i[2], k)
+                    validate_range(new_range)
                     insidespace += (i[2] - i[1] +1 ) * (k - i[3] ) #*up to* this range 
                     insidespace += (r[2] - r[1] ) #top cap
 
-                    push!(next_ranges, new_range)
+                    pushfirst!(inside_ranges, new_range)
                     break
                 end 
-                if r[2] == i[2] #shrinks us from the bottom
+                if r[2] == i[1] #extends to the top - this needs to go on the *inside* ranges, with a depth of k, for any subsequent new ranges to glom
                     match = true
-                    new_range = (i[1], r[1], k)
-                    insidespace += (i[2] - i[1] + 1 ) * (k - i[3] ) #*up to* this range 
-                    insidespace += (r[2] - r[1] ) #bottom cap
-    
-                    push!(next_ranges, new_range)
+                    new_range = (r[1], i[2], k) 
+                    insidespace += (i[2] - i[1] + 1) * (k - i[3]) #*up to* this range 
+                    validate_range(new_range)
+                    pushfirst!(inside_ranges, new_range);
                     break
                 end
-                if r[1] > i[2] #we're past the end of the ranges we could match - and all subsequent new ranges will be even further past
-
+                if r[1] > i[2] #we're past the end of the ranges we could match - and all subsequent new ranges will be even further past ??????                    println("7")
                     push!(next_ranges, i); #so this range goes onto next_ranges
-                    #pushfirst!(next_ranges)
                 end
             end 
 
-            #if our range is past all ranges in the inside_ranges, add it to the list 
+            #if our range is past all ranges in the inside_ranges, add it to the list  ARG, this triggers on leaving 1 
             if match != true
                 push!(next_ranges, (r[1], r[2], k))
                 past_it = true; #and signal that everything else is as well at this point
@@ -158,10 +163,10 @@ function read_instructions(f)
         inside_ranges = deepcopy(next_ranges)
     
     end #depths iter
-    
+
     insidespace
 end
-#answer from another solution is 45757884535661 (we get about half this, despite our test example passing perfectly)
+#answer from another solution is 45757884535661 
 
 println("$(read_instructions("input"))")
 
