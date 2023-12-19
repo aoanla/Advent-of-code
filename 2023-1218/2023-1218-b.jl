@@ -62,7 +62,7 @@ function read_instructions(f)
     for k in depths
         new_ranges = collect(sort(unique(rowscols[ROW][k]))) #pairs of walls contain "internal space"
         #print number of ranges, which we assume is 1
-
+        println("$(length(inside_ranges))")
         #continue
         next_ranges = Tuple{Int, Int, Int}[]
         past_it = false
@@ -79,6 +79,8 @@ function read_instructions(f)
             while !isempty(inside_ranges)
                 i = popfirst!(inside_ranges)
                 #are these all the possible cases, exhaustively?
+                #definitely missing something - ranges should coalesce at some points down to 2 or 3 or 1 and these just grow almost monotonically from 1 to 57 (which is
+                #definitely not true - the start and end in all directions are only 1 to 3 ranges max)
                 if i[1] > r[2] #not in range - this new range is *before* this range [and thus needs to go in the next_ranges list now]
                     push!(next_ranges, (r[1], r[2], k))
                     pushfirst!(inside_ranges, i) #pop this back onto the list for the next new candidate
@@ -156,12 +158,7 @@ function read_instructions(f)
         inside_ranges = deepcopy(next_ranges)
     
     end #depths iter
-    println("Remaining ranges: $inside_ranges")
-    excess = 0
-    for i in inside_ranges
-        excess += i[2] - i[1] +1 
-    end
-    println("Potential excess = $excess")
+    
     insidespace
 end
 #answer from another solution is 45757884535661 (we get about half this, despite our test example passing perfectly)
