@@ -78,6 +78,7 @@ function read_instructions(f)
             match = false
             while !isempty(inside_ranges)
                 i = popfirst!(inside_ranges)
+                #are these all the possible cases, exhaustively?
                 if i[1] > r[2] #not in range - this new range is *before* this range [and thus needs to go in the next_ranges list now]
                     push!(next_ranges, (r[1], r[2], k))
                     pushfirst!(inside_ranges, i) #pop this back onto the list for the next new candidate
