@@ -114,3 +114,5 @@ end
 
 f = "input"
 println("$(parse_structures(f))")
+
+#we can probably do part 2 by a lazy binary search through the x⊕m⊕a⊕s space I guess if we didn't want to do the analysis properly
