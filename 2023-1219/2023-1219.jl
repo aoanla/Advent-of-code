@@ -7,7 +7,7 @@
 
 # L,R are the same 
 #          replace node with whatever L is (a leaf or a new node)
-
+using InteractiveUtils
 
 #Tracking cases
 # 
@@ -106,6 +106,7 @@ function parse_structures(fi)
             #accum += Base.invokelatest(Xin, input)
         end
         filt(T) = Base.invokelatest(Xin, T)
+        #println("$(InteractiveUtils.code_llvm(Xin, (typeof(TTs[1]),), optimize=true))")
         mapper(T) = T.x+T.m+T.s+T.a
         accum = mapreduce(mapper, + ,filter(filt, TTs))
     end
