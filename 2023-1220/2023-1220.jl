@@ -155,7 +155,8 @@ while isnothing(findfirst(==(UInt64(0)), old_vector .⊻ state_vector))
     println("$pulses")
 end
 
-#low pulses is out by 4 - button pulses?
+#So, this doesn't work because the msg queue state gets too big - this almost certainly needs a state analysis approach of some kind rather than direct simulation.
+#(This is not a thing I have a lot of knowledge about, far too "engineering")
 
 println("$(bitstring(state_vector))")
 println("$pulses")
