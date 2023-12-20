@@ -157,6 +157,7 @@ end
 
 #So, this doesn't work because the msg queue state gets too big - this almost certainly needs a state analysis approach of some kind rather than direct simulation.
 #(This is not a thing I have a lot of knowledge about, far too "engineering")
+#... why does my queue state get too big - this is on the *first button press* before it settles, so there must be a bug somewhere, as this can't be expected to happen.
 
 println("$(bitstring(state_vector))")
 println("$pulses")
