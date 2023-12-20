@@ -166,24 +166,50 @@ function push_the_button!()
     end
 end 
 
+#true === low remember, we want them all true
 
+#tracking         dj,     fl,     sk,     sd,      mv
+state_tracker = [ [true], [true], [true], [true], [true]]
+triggered = Dict{String, Bool}()
+for st ∈ ["hq", "mv", "gc", "cn"]
+    triggered[st] = false
+end
 
-old_vector = [UInt128(0)];
+tracked_mask = mapreduce(x->masks[x], |, ["hq", "mv", "gc", "cn"]);
+
+println("Tracked mask is \n\t\t\t$(bitstring(tracked_mask))")
 
 counter = 1
-while isnothing(findfirst(==(UInt128(0)), old_vector .⊻ state_vector)) && counter < 1002
-    
-    push!(old_vector, state_vector) 
+while counter < 8000
+
     push_the_button!()
-    #println("$(bitstring(state_vector))")
-    #println("$pulses")
-    if counter > 990
-        println("Counter $counter $(pulses)  $(prod(pulses))")
-    end
-    if stopall == true
-        break
+    #for (tracked,vec) ∈ zip(["dj", "fl", "sk", "sd", "mv"], state_tracker)
+    #    push!(vec, get_state(tracked) != 0 ) #0 is *high* which is *false
+    #end]
+    for tracked ∈ ["hq", "mv", "gc", "cn"]
+        if !triggered[tracked] && get_state(tracked) == 0 #it flipped!
+            triggered[tracked] = true
+            println("Zero ($tracked) @ $counter [full tracked state is: \n\t\t\t$(bitstring(state_vector & tracked_mask))]")
+        end
     end
     global counter += 1
 end
 
+println("$state_tracker")
 #pt 1 (after making my state vector 128bits to hold all the state!)
+
+#periods
+
+# 1100 -> 4 (2 1s 2 0s) dj
+# 1 (doesn't change state for at least 1000 cycles?) fl, sk
+    # first 0 @ 1024 for fl 
+    # first 0 @ 2048 for sk
+# 64 (32 1s, 32 0s) sd
+# 512 (256 1s, 256 0s) mw
+
+#arg, not these, I missed the other things feeding into pt
+
+# cn, gc, hq, mv
+
+#....no, the real problem is that I'm not looking at when they *fire*, just what their *states* are. 
+# I need to look at *when they send a message to pt* (since pt's state can change during a button press event.)
