@@ -5,7 +5,14 @@ Node pt has inputs dj, fl, rf(! - so once rf fires it unsets pt), sk, sd, mv
 So, we need to determine when dj, fl, sk, sd, mv are all low simultaneously.
 One imagines that this is another LCM problem, tracking the states of dj, fl, sk, sd, mv and finding their cyclic periods?
 
+
+Note above: see the mistake (misreading "rx" [the actual node the question cares about] for "rf" [not a node that's important]) - it doesn't help that both nodes *are* connected
+to a multi-input NAND.
+
 =#
+using Pkg
+Pkg.activate(".")
+using Primes
 
 
 #No time just a quick note that this is (even as explained) a quick state machine / cycle detection situation [as in a previous puzzle this year...]
@@ -149,6 +156,8 @@ println("$nodes_out")
 
 masks!()
 
+
+counter = 1
 stopall = false
 function push_the_button!()
     pulses[2] += 1 ; #the button pulse itself
@@ -156,7 +165,10 @@ function push_the_button!()
     epoch = 1
     while !isempty(queue) 
         msg = popfirst!(queue)
-        
+        #lots of interesting pulses if we filter for stuff - we probably want primes where things are in sync?
+        if  msg[1] ∈ ["vq", "tf", "db", "ln" ] && msg[2] == UInt128(0) && Primes.isprime(counter)
+            println("Step $counter Message: $msg")
+        end
         send_pulse!(msg)
         ##append!(qq, send_pulse!(msg))
         #queue = qq
@@ -175,23 +187,23 @@ for st ∈ ["hq", "mv", "gc", "cn"]
     triggered[st] = false
 end
 
-tracked_mask = mapreduce(x->masks[x], |, ["hq", "mv", "gc", "cn"]);
+#tracked_mask = mapreduce(x->masks[x], |, ["hq", "mv", "gc", "cn"]);
 
-println("Tracked mask is \n\t\t\t$(bitstring(tracked_mask))")
+#println("Tracked mask is \n\t\t\t$(bitstring(tracked_mask))")
 
 counter = 1
-while counter < 8000
+while counter < 6000
 
     push_the_button!()
     #for (tracked,vec) ∈ zip(["dj", "fl", "sk", "sd", "mv"], state_tracker)
     #    push!(vec, get_state(tracked) != 0 ) #0 is *high* which is *false
     #end]
-    for tracked ∈ ["hq", "mv", "gc", "cn"]
-        if !triggered[tracked] && get_state(tracked) == 0 #it flipped!
-            triggered[tracked] = true
-            println("Zero ($tracked) @ $counter [full tracked state is: \n\t\t\t$(bitstring(state_vector & tracked_mask))]")
-        end
-    end
+   # for tracked ∈ ["hq", "mv", "gc", "cn"]
+   #     if !triggered[tracked] && get_state(tracked) == 0 #it flipped!
+   #         triggered[tracked] = true
+   #         println("Zero ($tracked) @ $counter [full tracked state is: \n\t\t\t$(bitstring(state_vector & tracked_mask))]")
+   #     end
+   # end
     global counter += 1
 end
 
