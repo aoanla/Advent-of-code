@@ -8,4 +8,5 @@
 **/Manifest.toml
 **/*.mp4
 **/*.png
+**/*.py
 **/*.svg
