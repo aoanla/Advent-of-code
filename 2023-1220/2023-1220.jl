@@ -1,3 +1,13 @@
+#=Pt 2 analysis:
+
+Node rf is written by node &pt (which is a conjugator - essentially a NAND with more than 2 inputs), and also broadcast (which sets it high initally to start us off)
+Node pt has inputs dj, fl, rf(! - so once rf fires it unsets pt), sk, sd, mv
+So, we need to determine when dj, fl, sk, sd, mv are all low simultaneously.
+One imagines that this is another LCM problem, tracking the states of dj, fl, sk, sd, mv and finding their cyclic periods?
+
+=#
+
+
 #No time just a quick note that this is (even as explained) a quick state machine / cycle detection situation [as in a previous puzzle this year...]
 
 #Build graph
