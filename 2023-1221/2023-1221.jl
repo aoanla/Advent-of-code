@@ -142,3 +142,7 @@ println("$(3944+(14863+15890*4)*4)")
 # 3x3 gives 4 (odd) points, 4 (even) small tries and the centre ; 5x5 gives centre + 4 odd tiles + 4 (even) points + 4 (even) big segs + 8 small (odd) triangles
 # we know that we want an *even* number so maybe we can solve this with 1x1, 5x5 (n=2), 9x9 (n=4), 13x13 (n=6) and simultaneous equations for the 
 # different segment contributions? - tiles we already know!, points, small tries, big segs 
+
+
+#... edit to add, I just noticed another pattern in the input data (there's a big diamond in it - so we *are* supposed to sum the "small diamond" contribution 
+#specially) - we could *also* see this now as a tiling of "inner diamond" and the outer corners (forming their own diamond with adjacent tiles)
