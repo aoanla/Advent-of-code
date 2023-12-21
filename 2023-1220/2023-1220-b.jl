@@ -159,6 +159,7 @@ masks!()
 
 counter = 1
 stopall = false
+primes_q = []
 function push_the_button!()
     pulses[2] += 1 ; #the button pulse itself
     push!(queue, ("roadcaster", low_pulse))
@@ -168,11 +169,9 @@ function push_the_button!()
         #lots of interesting pulses if we filter for stuff - we probably want primes where things are in sync?
         if  msg[1] ∈ ["vq", "tf", "db", "ln" ] && msg[2] == UInt128(0) && Primes.isprime(counter)
             println("Step $counter Message: $msg")
+            push!(primes_q, counter)
         end
         send_pulse!(msg)
-        ##append!(qq, send_pulse!(msg))
-        #queue = qq
-        #println("Queue epoch $epoch, queue length $(length(queue))")
         epoch += 1
 
     end
@@ -180,34 +179,17 @@ end
 
 #true === low remember, we want them all true
 
-#tracking         dj,     fl,     sk,     sd,      mv
-state_tracker = [ [true], [true], [true], [true], [true]]
-triggered = Dict{String, Bool}()
-for st ∈ ["hq", "mv", "gc", "cn"]
-    triggered[st] = false
-end
-
-#tracked_mask = mapreduce(x->masks[x], |, ["hq", "mv", "gc", "cn"]);
-
-#println("Tracked mask is \n\t\t\t$(bitstring(tracked_mask))")
 
 counter = 1
 while counter < 6000
 
     push_the_button!()
-    #for (tracked,vec) ∈ zip(["dj", "fl", "sk", "sd", "mv"], state_tracker)
-    #    push!(vec, get_state(tracked) != 0 ) #0 is *high* which is *false
-    #end]
-   # for tracked ∈ ["hq", "mv", "gc", "cn"]
-   #     if !triggered[tracked] && get_state(tracked) == 0 #it flipped!
-   #         triggered[tracked] = true
-   #         println("Zero ($tracked) @ $counter [full tracked state is: \n\t\t\t$(bitstring(state_vector & tracked_mask))]")
-   #     end
-   # end
     global counter += 1
 end
 
-println("$state_tracker")
+println("Primes at @ $primes_q \nSo, as Eric loves co-prime cycles, the cycle for rx is $(prod(primes_q))")
+
+
 #pt 1 (after making my state vector 128bits to hold all the state!)
 
 #periods
