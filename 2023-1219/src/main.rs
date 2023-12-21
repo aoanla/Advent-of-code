@@ -11,39 +11,9 @@
 
 //these are *inclusive* Ranges
 #[derive(Copy, Clone, Debug)]
-struct Range {
+struct Interval {
     l: i16, //low end 
     h: i16, //high end   
-}
-
-#[derive(Copy, Clone, Debug)]
-struct XMASRange {
-    x: Range, 
-    m: Range, 
-    a: Range,
-    s: Range, 
-}
-
-impl Range {
-    fn gt(&self, lim: i16) -> (Some<Range>, Some<Range>){
-        if self.h <= lim { //all of the range is below lim, so none goes left
-            (None, Some(self))
-        } else if self.l > lim { //all of the range is above lim, so none goes right
-            (Some(self),None)
-        } else {
-            (Some(Range(lim+1,self.h)), Some(Range(self.l,lim)))
-        }
-    }
-
-    fn lt(&self, lim: i16) -> (Some<Range>, Some<Range>){
-        if self.l >= lim { //all of the range is above lim, so none goes left
-            (None, Some(self))
-        } else if self.h < lim { //all of the range is below lim, so none goes right
-            (Some(self),None)
-        } else {
-            (Some(Range(self.l,lim-1)), Some(Range(lim,self.h)))
-        }
-    }
 }
 
 // Stuff we need for tree
@@ -55,19 +25,69 @@ enum Item {
 }
 
 
+
+
+impl Interval {
+    fn gt(&self, lim: i16) -> (Some<Interval>, Some<Interval>){
+        if self.h <= lim { //all of the range is below lim, so none goes left
+            (None, Some(self))
+        } else if self.l > lim { //all of the range is above lim, so none goes right
+            (Some(self),None)
+        } else {
+            (Some(Interval(lim+1,self.h)), Some(Interval(self.l,lim)))
+        }
+    }
+
+    fn lt(&self, lim: i16) -> (Some<Interval>, Some<Interval>){
+        if self.l >= lim { //all of the range is above lim, so none goes left
+            (None, Some(self))
+        } else if self.h < lim { //all of the range is below lim, so none goes right
+            (Some(self),None)
+        } else {
+            (Some(Interval(self.l,lim-1)), Some(Interval(lim,self.h)))
+        }
+    }
+}
+
+
+type XMASRange [Interval ; 4] //X M A S
+
+
+
 impl XMASRange {
+    //Selector type for easily expressing "replace just one element of this array in the new array"
+    fn sel(&self, index: Item, selector: Item, val: Interval) -> Interval {
+        selector == index && return val 
+        return self[index]
+    }
+
+    fn one_diff_range(&self, selector: Item, val: Interval ) -> XMASRange {
+        [self.sel(X as usize, selector, val), self.sel(M as usize, selector, val), self.sel(A as usize, selector, val), self.sel(S as usize, selector, val)]
+    }
+
+
     fn gt(&self, lim: i16, selector: Item) -> (Some<XMASRange>, Some<XMASRange>) {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
-        match item.gt(lim) {
+        match self[selector as usize].gt(lim) {
             (None, None)    => (None, None), //this should never happen!
-            (None, Some(r)) => (None, Some(XMASRange(item: r, ..self)) ) , //how do we express this "update this named field" in Rust? I don't think we can - this is suited to a HashMap or something
-            (Some(r), None) => (Some(XMASRange(item: r, ..self)), None ), 
-            (Some(r), Some(t)) => (Some(XMASRange(item: r, ..self)), Some(XMASRange(item: t, ..self)))
+            (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
+            (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
+            (Some(r), Some(t)) => (Some(self.one_diff_range(selector, r)), Some(self.one_diff_range(selector, t))),
         }
 
     }
 
     //and the same for lt here
+    fn lt(&self, lim: i16, selector: Item) -> (Some<XMASRange>, Some<XMASRange>) {
+        //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
+        match self[selector as usize].lt(lim) {
+            (None, None)    => (None, None), //this should never happen!
+            (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
+            (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
+            (Some(r), Some(t)) => (Some(self.one_diff_range(selector, r)), Some(self.one_diff_range(selector, t))),
+        }
+
+    }
 
 }
 
@@ -80,27 +100,67 @@ enum Cmp {
 
 enum Node {
     Accept{state: XMASRange},
-    Reject,
+    Reject{state: XMASRange},
     // "state" here is the state of the Range when entering this node so we can do a cheaper DFS
-    Split{state: XMASRange, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>},
+    Split{state: Option<XMASRange>, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>},
 }
 
 
 impl Node {
-    fn process(&mut self) -> .... {
+    fn process(&mut self, queue: &mut Vec<XMASRange>, acceptlist: &mut HashSet<XMASRange>)  {
         match self {
-            Accept(s) => push s -> acceptlist     ,/*push to Accept list */
-            Reject(_) => (),  /* don't do anything */
+            Accept(s) => acceptlist.insert(s)   ,/*push to Accept list */
+            Reject(_) => {},  /* don't do anything */
             n => {
-
-                    (L, R) = n.state.{gt or lt}(val, item)
-
-                    //*if node gets Some(state), bother to push it to the queue*/
+                    (L, R) = match self.cmp {
+                                GT =>  n.state.gt(n.val, n.item)
+                                LT =>  n.state.lt(n.val, n.item)
+                    }
+                    //*if node gets Some(state), bother to push it to the queue - L should be on the *top* of the queue for DFS */
+                    if let Some(right_v) = R {self.right.state = right_v; queue.push(&mut self.right)};
+                    if let Some(left_v) = L {self.left.state = left_v; queue.push(&mut self.left)};
                 }
-            }
-
-
+            };
     }
 
 
+}
+
+
+/* process input into tree */
+
+
+
+/* process the tree, DFS */
+fn get_ranges(in_node: &mut Node) -> HashSet<XMASRange> {
+    /* then walk the tree */
+    in_node.state = XMASRange(Interval(1,4000), Interval(1,4000), Interval(1,4000), Interval(1,4000));
+
+    accepts = HashSet<XMASRange>::new();
+    queue = Vec::<XMASRange>::new();
+    queue.push(in_node);
+    node_now = queue.pop();
+    while let Some(cursor) = node_now {
+        cursor.process(queue, accepts);
+        node_now = queue(pop);
+    }
+    accepts
+}
+
+//do Range coalescence stuff for 4d overlapping ranges (bleh)
+fn distinct_ranges(xmas_set: &mut HashSet<XMASRange>) -> i64 {
+    //overlap stuff
+
+    
+    //and sum to get answer
+    xmas_set.iter().fold(0, |acc, item| acc + item.iter().product())
+}
+
+
+fn main() {
+
+    tree_node = parse("input");
+    intervals = get_ranges(tree_node);
+    answer = distinct_ranges(intervals);
+    println!("{answer}");
 }
