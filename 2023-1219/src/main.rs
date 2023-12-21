@@ -60,9 +60,9 @@ impl XMASRange {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
         match item.gt(lim) {
             (None, None)    => (None, None), //this should never happen!
-            (None, Some(r)) => (None, Some(XMASRange(.... r...)) ) ,
-            (Some(r), None) => (Some(XMASRange(...r...)), None ), 
-            (Some(r), Some(t)) => (Some(XMASRange(...r...)), Some(XMASRange(....t....)))
+            (None, Some(r)) => (None, Some(XMASRange(item: r, ..self)) ) , //how do we express this "update this named field" in Rust? I don't think we can - this is suited to a HashMap or something
+            (Some(r), None) => (Some(XMASRange(item: r, ..self)), None ), 
+            (Some(r), Some(t)) => (Some(XMASRange(item: r, ..self)), Some(XMASRange(item: t, ..self)))
         }
 
     }
