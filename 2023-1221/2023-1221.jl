@@ -61,7 +61,7 @@ for count ∈ 1:(65+131*4)
     if count % 2 == 1
         union!(six_four_nodes, active_nodes)
     end
-    if count ∈ [64,65+130, 65+131, 65+132, 65+130+131, 65+131+131, 65+131+131+131, 65+131*4]
+    if count ∈ [64,130, 65+131, 261, 65+130+131, 65+131+131, 65+131+131+131, 65+131*4]
         println("Odd cells at count $count = $(length(six_four_nodes))")
     end
 end
@@ -95,10 +95,12 @@ println("$(length(six_four_nodes))");
 
 #think about what happens with the triangular wavefronts - at step 130, we're actually the centre of a *rotated* title that's diamond oriented, and samples
 # the first entire tile (odd counts) + 4 quarters of the next tiles (even counts) - so we've actually sampled 15505 cells in total (2 "tiles")
+   #note, this is not true - at step 130 we've sampled 15272 tiles!
 
 #another 131 steps later, we'll sample 5 full tiles (centre + ortho adjacents) , 4 half tiles (the diagonals between their corners) and 4 quarter tiles (the new peaks of the diamond)
 # which is 8 tiles total - 4 times the 1x130 area and thus 15505*4 = 62020 cells in total walkable
 # this is "261" steps distance 
+    #note this is not true, at step 261 we've sampled 62004 tiles!
 
 #ah, but that isn't helpful - we're still "off by one-half". 
 #... that's because we want 0.5 (the diamond where the cells just touch the border of the inner cell) in the centre plus a *whole* tile orthogonally (for 65+131 ) then 65 + (2*131) and so on - the centre tile is sampled differently
