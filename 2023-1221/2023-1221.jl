@@ -46,7 +46,7 @@ end
 active_nodes = Set{CartesianIndex{2}}([starter])
 for count ∈ 1:10
     global active_nodes = expand(active_nodes, matrix)
-    if count % 2 == 0
+    if count % 2 == 1
         union!(six_four_nodes, active_nodes)
     end
 end
@@ -58,3 +58,5 @@ println("$(length(six_four_nodes))");
 # however, since it is odd, *any* tile that can be reached in an odd number of steps can *also* be reached in 26501365 steps (just as for even and 64 above)
 #so, this problem reduces to "find the tiles no more than 26501365 steps away which have odd step counts" - since the map tiles, we can probably do some maths on what
 #the images look like by just filling the "main tile" and inspecting its step patterns (esp as we have a 2 tile border on the repeat edges of .s with no obstructions)
+
+#we can probably count "how far we get" by inspecting the "count at which each cell on the border is reached" and multiplying up
