@@ -55,3 +55,6 @@ println("$(length(six_four_nodes))");
 
 #part 2
 #annoyingly 26501365 doesn't factor nicely (it's 5 x 11 x 481843)
+# however, since it is odd, *any* tile that can be reached in an odd number of steps can *also* be reached in 26501365 steps (just as for even and 64 above)
+#so, this problem reduces to "find the tiles no more than 26501365 steps away which have odd step counts" - since the map tiles, we can probably do some maths on what
+#the images look like by just filling the "main tile" and inspecting its step patterns (esp as we have a 2 tile border on the repeat edges of .s with no obstructions)
