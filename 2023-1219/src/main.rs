@@ -89,11 +89,11 @@ enum Node {
 impl Node {
     fn process(&mut self) -> .... {
         match self {
-            Accept(s) => push self.state -> acceptlist     ,/*push to Accept list */
+            Accept(s) => push s -> acceptlist     ,/*push to Accept list */
             Reject(_) => (),  /* don't do anything */
             n => {
 
-                    (L, R) = self.state.{gt or lt}(val, item)
+                    (L, R) = n.state.{gt or lt}(val, item)
 
                     //*if node gets Some(state), bother to push it to the queue*/
                 }
