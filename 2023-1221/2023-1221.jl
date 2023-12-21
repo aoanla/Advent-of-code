@@ -60,3 +60,4 @@ println("$(length(six_four_nodes))");
 #the images look like by just filling the "main tile" and inspecting its step patterns (esp as we have a 2 tile border on the repeat edges of .s with no obstructions)
 
 #we can probably count "how far we get" by inspecting the "count at which each cell on the border is reached" and multiplying up
+#yes... 26501365 / 131 (the tile width) is according to bc, 202300.496 (that is, 1 cell off being exactly whole+1/2 num of tiles - which makes sense as we start at cell 0)
