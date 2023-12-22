@@ -20,8 +20,9 @@ mutable struct Brickterval
     x:: Interval
     y:: Interval
     z:: Interval
-    supports::Vector{Tuple{Int, Int}} #vector of bricks sitting on it as (stack index, posn in that layer) tuples
+    support::Set{Brickterval} #Set of *essential* bricks supporting its chain- reset by being on an essential brick directly
     essential::Bool #is this brick essential [does it have supports == 1 anywhere in that lit]
+    count::Int #power count for essential bricks "how many bricks fall if I go away"
 end 
 
 function intersect(r1::Interval, r2::Interval)
@@ -41,7 +42,7 @@ function parse_to_brickterval(s::String)
     lows, highs = split(s, '~')
     ints = collect(map(sort_tuple, zip( parse.(UInt16, split(lows,',')), parse.(UInt16, split(highs, ',') )) ))
 
-    Brickterval( Interval(ints[1]...), Interval(ints[2]...), Interval(ints[3]...), UInt16[], false)
+    Brickterval( Interval(ints[1]...), Interval(ints[2]...), Interval(ints[3]...), Set{Brickterval}(), false, 1)
 end
 
 bricks = open("input") do f
@@ -58,66 +59,121 @@ sort!(bricks, by=low_z)
 #okay, so now we can start intersecting the bricks - this will be easiest if we insert them into a Vector ordered by height that we build dynamically
 # so lookup for "height = n" is faster - the wrinkle here is that we need to insert at high_z(brick) because that's the bit they'll hit first
 
-highest_brick_z = high_z(bricks[end])
+function settle!(bricks)
+    highest_brick_z = high_z(bricks[end])
 
-brick_stack = [ Brickterval[] for i in 1:highest_brick_z ]
-essential_bricks = Set{Tuple{Int,Int}}() #tuple of coords of the essential bricks now
+    brick_stack = [ Brickterval[] for i in 1:highest_brick_z ]
+    essential_bricks = Set{Brickterval}() #vector of the essential bricks now
+    moved =0
 
-for brick in bricks 
-    hit = false
-    for layer in low_z(brick)-1:-1:1 #can't collide with bricks "above" us and the stack isn't that big anyway - colliding "down the list" 
-        intersectors = []
-        for l_brick_i in eachindex(brick_stack[layer]) #check each collision    
-            if plane_intersect(brick_stack[layer][l_brick_i], brick)
-                push!(intersectors, l_brick_i)
+    for brick in bricks
+        #println("BRICK: $brick") 
+        hit = false
+
+        for layer in low_z(brick)-1:-1:1 #can't collide with bricks "above" us and the stack isn't that big anyway - colliding "down the list" 
+            intersectors = []
+            for l_brick_i in eachindex(brick_stack[layer]) #check each collision    
+                if plane_intersect(brick_stack[layer][l_brick_i], brick)
+                    push!(intersectors, l_brick_i)
+                end
+            end 
+            isempty(intersectors) && continue #no intersection at this height, try lower 
+            #else hits 
+            hit = true
+            sups = length(intersectors)
+
+            if (layer+1) < brick.z.low
+                moved+=1
             end
-        end 
-        isempty(intersectors) && continue #no intersection at this height, try lower 
-        z_heigh = brick.z.high - brick.z.low 
-        brick.z.low = layer+1
-        brick.z.high = layer + 1 + z_heigh 
-        push!(brick_stack[brick.z.high], brick) #add to stack one up
-        hit = true
-        sups = length(intersectors)
-        for i in intersectors #add coords of the brick we support to the list 
-            push!(brick_stack[layer][i].supports, (brick.z.high, length(brick_stack[brick.z.high])) )
-        end
-        if sups == 1#this brick is essential 
-            brick_stack[layer][intersectors[begin]].essential = true 
-            push!(essential_bricks, (layer, intersectors[begin]) ) 
-        end
+            
+            z_heigh = brick.z.high - brick.z.low 
+            brick.z.low = layer+1
+            brick.z.high = layer + 1 + z_heigh 
+        
+            #if our direct support is not essential, essential supports for this brick are the union of the essential supports for our direct supports  
+            # this is important for when we walk the tree to get "total falling bricks" = removing an essential brick does not necessarily drop everything above it
+            #                                                                                (a brick could bridge two essentials higher up)
 
-        break #remember to stop checking now! 
+            if sups == 1#this brick is essential because it's critical to our brick
+                brick_stack[layer][intersectors[begin]].essential = true 
+                push!(essential_bricks, brick_stack[layer][intersectors[begin]] ) 
+                brick.support = Set(brick_stack[layer][intersectors]) #set will turn our vec into a set okay even with 1 elem
+            else #sups is bigger
+                brick.support = mapreduce(x->x.support , ∪, brick_stack[layer][intersectors])
+            end
+
+            push!(brick_stack[brick.z.high], brick) #add to stack one up
+
+            break #remember to stop checking now! 
+        end
+        if hit == false #hit the ground 
+            z_heigh = brick.z.high - brick.z.low 
+            brick.z.low = 1 
+            brick.z.high = z_heigh + 1 
+            push!(brick_stack[brick.z.high], brick)
+        end 
     end
-    if hit == false #hit the ground 
-        z_heigh = brick.z.high - brick.z.low 
-        brick.z.low = 1 
-        brick.z.high = z_heigh + 1 
-        push!(brick_stack[brick.z.high], brick)
-    end 
+    (brick_stack, essential_bricks, moved)
 end 
 
-#println("$brick_stack")
+(brick_stack, essential_bricks, _) = settle!(bricks)
 
-#println("$(length(essential_bricks))")
-
+#println("$bricks")
 println("$(length(bricks) - length(essential_bricks))")
 
 
-lookup(st_i) = brick_stack[st_i[1]][st_i[2]]
+#sort for highest essential brick first which is important for efficiency
+es_vec = sort(collect(essential_bricks), by = x->x.z.high, rev=true)
 
-tot = 0 
-for e_brick_i in essential_bricks
-    e_brick = lookup(e_brick_i)
-    tot_dep_bricks = Set(e_brick.supports)
-    stck = []
-    append!(stck, e_brick.supports)
-    while !isempty(stck)
-        node = lookup(pop!(stck))
-        union!(tot_dep_bricks,  node.supports)
-        append!(stck, node.supports)
+function part2!(ess_bricks, brick_stack)
+    tot = 0 
+    for e_brick_i ∈ eachindex(ess_bricks)
+
+        e_brick = ess_bricks[e_brick_i]
+
+        layer = e_brick.z.high #don't scan layers *below* this brick!
+        dep_essent = Set([e_brick])
+        #the essential bricks dependant solely on this essential brick... 
+        dependant_essentials = filter(x->issetequal(x.support, dep_essent) , ess_bricks[begin:e_brick_i-1])
+        start_power = 0 #mapreduce(x->x.count, + , dependant_essentials) #start with the power of those essentials - no, just assign this to them in the stack
+        #bricks will fall if their set of essentials supports is a subset of the supports we remove with this one essential, which is union us+our own dependant_essentials
+        union!(dep_essent, dependant_essentials)
+        #safe as to be essential a brick must have at least 1 thing above it
+        #this hack is because it seems to be super difficult to overwrite a whole row of an array like this without using element indices, even with @views
+        for s_layer ∈ (layer+1):length(brick_stack)
+            bricks_to_consider = filter(x->x.support ⊆ dep_essent,  brick_stack[s_layer] ) 
+
+            start_power += mapreduce(x->x.count, +, bricks_to_consider; init = 0) #essential bricks have count > 1 for their dependencies
+            #count them, and then remove them from brick_stack layer: 
+            brick_stack[s_layer] = filter(x->x.support ⊈ dep_essent, brick_stack[s_layer]) #iterating over just the slices doesn't work due to assignment
+ 
+        end
+
+        tot+=start_power #bricks that fall *if this brick is deleted*
+        e_brick.count = start_power + 1 #because if *this brick /falls/* it goes down and so does eveything on it (so start_power +1 )
     end
-    global tot += length(tot_dep_bricks)
-end 
+    tot
+end
 
-println("$tot") #this is the wrong answer, but I'm not sure if its because the wording of what's asked for is slightly ambiguous or if the algo is wrong
+println("$(part2!(es_vec, brick_stack))") #also too low :(
+
+
+#we could just brute-force this by doing the "falling thing" again with the "sorted" list of bricks after we settle them once (but removing the "essential" brick each time)
+#
+sort!(bricks, by=low_z)
+
+function brick_eq(ba,bb)
+    ba.x.low != bb.x.low || ba.x.high != bb.x.high || ba.y.low != bb.y.low || ba.z.low != bb.z.low || bb.y.high != bb.y.high
+end
+
+function brute_force(es_vec, bricks)
+    counter =0
+    for eb in es_vec
+        f_bricks = deepcopy(collect(filter(x->brick_eq(x,eb), bricks)))
+        _, _, count = settle!(f_bricks)
+        counter+=count
+    end
+    counter 
+end
+
+println("$(brute_force(es_vec, bricks))") #this is *also* not the right answer somehow... what am I missing here?
