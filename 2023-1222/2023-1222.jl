@@ -20,8 +20,8 @@ mutable struct Brickterval
     x:: Interval
     y:: Interval
     z:: Interval
-    supports::Vector{UInt16} #vector of bricks sitting on it counting "how many bricks support that brick" 
-    essential::Bool #is this brick essential [does it have supports == 1 anywhere in that list]
+    supports::Vector{Tuple{Int, Int}} #vector of bricks sitting on it as (stack index, posn in that layer) tuples
+    essential::Bool #is this brick essential [does it have supports == 1 anywhere in that lit]
 end 
 
 function intersect(r1::Interval, r2::Interval)
@@ -61,7 +61,7 @@ sort!(bricks, by=low_z)
 highest_brick_z = high_z(bricks[end])
 
 brick_stack = [ Brickterval[] for i in 1:highest_brick_z ]
-essential_bricks = Set{Brickterval}()
+essential_bricks = Set{Tuple(Int,Int)}() #tuple of coords of the essential bricks now
 
 for brick in bricks 
     hit = false
@@ -73,19 +73,20 @@ for brick in bricks
             end
         end 
         isempty(intersectors) && continue #no intersection at this height, try lower 
-        sups = length(intersectors)
-        for i in intersectors
-            push!(brick_stack[layer][i].supports, sups)
-        end
-        if sups == 1#this brick is essential 
-            brick_stack[layer][intersectors[begin]].essential = true 
-            push!(essential_bricks, brick_stack[layer][intersectors[begin]]) 
-        end
         z_heigh = brick.z.high - brick.z.low 
         brick.z.low = layer+1
         brick.z.high = layer + 1 + z_heigh 
         push!(brick_stack[brick.z.high], brick) #add to stack one up
         hit = true
+        sups = length(intersectors)
+        for i in intersectors #add coords of the brick we support to the list 
+            push!(brick_stack[layer][i].supports, (brick.z.high, length(brick_stack[brick.z.high])) )
+        end
+        if sups == 1#this brick is essential 
+            brick_stack[layer][intersectors[begin]].essential = true 
+            push!(essential_bricks, (layer, intersectors[begin]) ) 
+        end
+
         break #remember to stop checking now! 
     end
     if hit == false #hit the ground 
@@ -101,3 +102,19 @@ end
 #println("$(length(essential_bricks))")
 
 println("$(length(bricks) - length(essential_bricks))")
+
+
+lookup(st_i) = brick_stack[st_i[1]][st_i[2]]
+
+tot = 0 
+for e_brick_i in essential_bricks
+    power = length(e_brick_i.supports ) # start with the length of the supports list for this brick
+    stck = []
+    append!(stck, e_brick_i.supports )
+    while !isempty(stck)
+        node = lookup(pop!(stck))
+        power += length(node.supports)  #this does not work if there's overlap in the sets of supported things of course - maybe we should just build this as we go initially
+        append!(stck, node.supports)
+    end
+    global tot += power
+end 
