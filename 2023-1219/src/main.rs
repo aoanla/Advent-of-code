@@ -4,10 +4,16 @@
 
 */
 
+//use regex::Regex;
+use std::collections::HashMap;
+use std::fs::read_to_string;
+
 // Stuff we need for range
 // ranges are split by > or < into two ranges (careful with those off-by-one errors!)
 //   R[x,y] => (> n) => R[n+1,y] :Left , R[x, n] :Right 
 //   R[x,y] => (< n) => R[x, n-1] :Left , R[n, y] :Right 
+
+
 
 //these are *inclusive* Ranges
 #[derive(Copy, Clone, Debug)]
@@ -93,14 +99,14 @@ impl XMASRange {
 
 
 
-enum Cmp {
+enum Cmp{
     GT,
     LT, 
 }
 
 enum Node {
-    Accept{state: XMASRange},
-    Reject{state: XMASRange},
+    Accept{state: Option<XMASRange>},
+    Reject{state: Option<XMASRange>},
     // "state" here is the state of the Range when entering this node so we can do a cheaper DFS
     Split{state: Option<XMASRange>, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>},
 }
@@ -128,6 +134,31 @@ impl Node {
 
 
 /* process input into tree */
+fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Node 
+    parse_str = lookup[start];
+    //begin parsing
+    item = match parse_str[0] {
+        'x' => X, 
+        'm' => M,
+        'a' => A,
+        's' => S, 
+    };
+    condition = match parse_str[1] {
+        '>' => GT, 
+        '<' => LT,
+    }
+    value = //parse digits
+    left = match {
+        'A'     => Accept(None),
+        'R'     => Reject(None),
+        n       => recursive_parse(n, &lookup),
+    }   
+    right = match {
+        'A' => Accept(None),
+        'R' => Reject(None),
+        'x'|'m' //argg, some of the names start with an m!
+    }
+
 
 //probably just recursively regex out the null operations first 
 // ,[OP]A,A => ,A  etc
@@ -137,6 +168,39 @@ impl Node {
 //      add that item from the list of items
 // add our item we started with 
 //
+fn parse(s: &str) -> Tree {
+    let buffer = fs::read_to_string(s).unwrap(); 
+
+  /* stuff to remove the "null operations" that branch to the same thing (A or R) on both sides
+        //just did this in bash, it was easier
+    let regex_bothA = Regex::new(r"[a-z][><][0-9]+:A,A").unwrap();
+    let regex_bothR = Regex::new(r"[a-z][><][0-9]+:R,R").unwrap();
+
+    let tmp = regex_bothR.replace(regex_bothA.replace(line, "A"), "R")
+
+    //match a stub that now is just an accept 
+    let regex_stub = Regex::new(r"([a-z]+){([AR])})").unwrap();
+    //if this matched, emit a new regex to reduce further strings
+    if let Some(caps) = regex_stub.captures(tmp) {
+        regexes.push( (Regex::new("[:," + &caps[1]).unwrap(), &caps[2])   )
+    }
+*/
+    let temp_dict = HashMap::<&str, &str>::new();
+    //stick our name -> { } stuff into this for easier lookup
+
+    //I feel like we should sort this input somehow to make making the tree easier
+    //maybe we at least ensure we start with "in" as the first node?
+    in_node = recursive_parse("in", &temp_dict)
+
+
+    //split line on 
+
+    //winnow 
+    separated(1.., op_and_left ,   ',')
+    one_of(['x','m','a','s']).
+}
+
+
 
 
 /* process the tree, DFS */
@@ -144,24 +208,21 @@ fn get_ranges(in_node: &mut Node) -> HashSet<XMASRange> {
     /* then walk the tree */
     in_node.state = XMASRange(Interval(1,4000), Interval(1,4000), Interval(1,4000), Interval(1,4000));
 
-    accepts = HashSet<XMASRange>::new();
-    queue = Vec::<XMASRange>::new();
+    let accepts = HashSet<XMASRange>::new();
+    let queue = Vec::<XMASRange>::new();
     queue.push(in_node);
-    node_now = queue.pop();
+    let mut node_now = queue.pop();
     while let Some(cursor) = node_now {
         cursor.process(queue, accepts);
-        node_now = queue(pop);
+        node_now = queue.pop();
     }
     accepts
 }
 
 //do Range coalescence stuff for 4d overlapping ranges (bleh)
 fn distinct_ranges(xmas_set: &mut HashSet<XMASRange>) -> i64 {
-    //overlap stuff
+    //urgh, of course we don't need to worry about interval intersections - this is a *tree* not a general graph, the intervals can't not be distinct!
 
-    //at overlaps - split the rightside range set into bits that don't overlap, splitting at x then a then m then s until all the new intervals are disjoint
-    //also consider merging adjacent intervals which are equal in the other directions. 
-    
     //and sum to get answer
     xmas_set.iter().fold(0, |acc, item| acc + item.iter().product())
 }
@@ -169,8 +230,8 @@ fn distinct_ranges(xmas_set: &mut HashSet<XMASRange>) -> i64 {
 
 fn main() {
 
-    tree_node = parse("input");
-    intervals = get_ranges(tree_node);
-    answer = distinct_ranges(intervals);
+    let tree_node = parse("input_sanitized");
+    let intervals = get_ranges(&tree_node);
+    let answer = distinct_ranges(&intervals);
     println!("{answer}");
 }
