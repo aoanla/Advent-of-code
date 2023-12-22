@@ -13,23 +13,23 @@
 # (because we can then trivially step off them and back into them endlessly until we get any other even number)
 # - are there any odd points which are also in the set? anything we can orbit with an odd cycle ?
 
-six_four_nodes = Set{CartesianIndex{2}}()
+
 
 map_raw = read("input")
 width = findfirst(==(UInt8('\n')), map_raw);
-s_matrix = (reshape(map_raw, width, :)[begin:end-1, :]);
+matrix = (reshape(map_raw, width, :)[begin:end-1, :]);
 
-#starter = findfirst(==(UInt8('S')), matrix)
+starter = findfirst(==(UInt8('S')), matrix)
 #println("$matrix")
 
 #start at exact centre 
-start_idx = (1+9*131) ÷ 2
-starter = CartesianIndex(start_idx,start_idx)
+#start_idx = (1+9*131) ÷ 2
+#starter = CartesianIndex(start_idx,start_idx)
 
 #new matrix by concatenation - big enough to get up to 2 tiles away left and right and up and down 
 
-line = [ s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix]
-matrix = [ line ; line ; line ; line ; line ; line ; line ; line ; line]
+#line = [ s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix s_matrix]
+#matrix = [ line ; line ; line ; line ; line ; line ; line ; line ; line]
 
 
 
@@ -41,7 +41,7 @@ S = CartesianIndex(1, 0)
 E = CartesianIndex(0, 1)
 W = CartesianIndex(0, -1)
 
-function expand(actives, matrix)
+function expand(actives, matrix, six_four_nodes)
     new_actives = Set{CartesianIndex{2}}()
     #println("$actives")
     for cell ∈ actives
@@ -55,18 +55,20 @@ function expand(actives, matrix)
     new_actives
 end
 
-active_nodes = Set{CartesianIndex{2}}([starter])
-for count ∈ 1:(65+131*4)
-    global active_nodes = expand(active_nodes, matrix)
-    if count % 2 == 1
-        union!(six_four_nodes, active_nodes)
+function find_parity_at_dist(parity, dist)
+    six_four_nodes = Set{CartesianIndex{2}}()
+    active_nodes = Set{CartesianIndex{2}}([starter])
+    for count ∈ 1:dist
+        active_nodes = expand(active_nodes, matrix, six_four_nodes)
+        if count % 2 == parity
+            union!(six_four_nodes, active_nodes)
+        end
     end
-    if count ∈ [64,130, 65+131, 261, 65+130+131, 65+131+131, 65+131+131+131, 65+131*4]
-        println("Odd cells at count $count = $(length(six_four_nodes))")
-    end
+    length(six_four_nodes)
 end
 
-println("$(length(six_four_nodes))");
+even = 0
+odd = 1
 
 #part 2
 #annoyingly 26501365 doesn't factor nicely (it's 5 x 11 x 481843)
@@ -127,7 +129,7 @@ println("$(length(six_four_nodes))");
 
 # we need 202300 multiples of 131 so our answer is
 
-println("$(3944+(14863+15890*4)*4)")
+#println("$(3944+(14863+15890*4)*4)")
 
 #hm, for 65+131*3 we get 189489 which is *not* what our formula thinks (it thinks 191543)
 #also not for 65+131*4 - we get 314556, formula thinks 317636
@@ -146,3 +148,55 @@ println("$(3944+(14863+15890*4)*4)")
 
 #... edit to add, I just noticed another pattern in the input data (there's a big diamond in it - so we *are* supposed to sum the "small diamond" contribution 
 #specially) - we could *also* see this now as a tiling of "inner diamond" and the outer corners (forming their own diamond with adjacent tiles)
+
+#having slept on this, I think the entire issue with the quadratic above is that it's only counting the *odd* tile fills. 
+#if we look at this from the perspective above of the "tile" really being a central diamond [==C], the "1/2 dist" bit, with then edge corners E 
+#then 1 tile = C + E , or equiv, E = tile - C
+#the parity of C and E will alternate in adjacent tiles so we need oddC and oddE, and evenC and evenE, to calculate the result
+
+#extending into adjacent tiles, we can see that a "small trie" is just 1/4 E [from symmetry we'll always get each quarter of E the same number of times]
+#                                   a big seg (missing 1 trie) is just C + 3/4 E 
+#                                   a "point"                  is just C + 1/2 E
+
+# whole tiles :
+
+#   1        2        o
+#            e       oeo 
+#   o       eoe     oeoeo             
+#            e       oeo
+#  1,0      1,4       o   9,4  - this is sum of 4Σ2n+1 stuff - gives quadratics in general as sum
+
+#our count is even so let's do this for an even distance  N
+
+# we'll always have 4 "points", and they'll be an odd tile so they contribute                   4×Co    +   2×Eo total 
+# we'll have N tries per side (they fill in gaps each column) for 4N tries, evens                           N×Ee total  
+# we'll have N-1 big segs per side (running point to point) for 4(N-1) big segs, odd            4(N-1)×Co   3(N-1)×Eo
+# we'll have N² even whole tiles                                                                N²×Ce       N²×Ee
+# we'll have (N-1)² odd whole tiles                                                             (N-1)²×Co   (N-1)²×Eo
+
+# Total Co: 4+4(N-1)+(N-1)² = 4 + 4N -4 +N² -2N + 1 = N² + 2N + 1 = (N+1)(N+1)
+# Total Eo: 2+3(N-1)+(N-1)² = 2 + 3N -3 +N² -2N + 1 = N² + N      =    N (N+1)
+# or, since ODDTILE = Co + Eo 
+# N(N+1) ODDTILE + N+1 Co
+
+# Ce, Ee are easier - we only get even Ee separately from the small tries so we just have
+# N² EVENTILES + N Ee
+
+EVENTILES = find_parity_at_dist(even, 132) #big enough to fill
+ODDTILES = find_parity_at_dist(odd, 132)
+CODD = find_parity_at_dist(odd, 65) 
+EODD = ODDTILES - CODD 
+CEVEN = find_parity_at_dist(even, 65)
+EEVEN = EVENTILES - CEVEN 
+
+println("$EVENTILES")
+
+function find_tiles_at_even_tile_dist(n)
+    n*(n+1)*ODDTILES  + (n+1)*CODD + (n^2)*EVENTILES + n*EEVEN 
+end
+
+#test 
+println("$(find_tiles_at_even_tile_dist(2))")
+println("$(find_tiles_at_even_tile_dist(4))")
+
+println("$(find_tiles_at_even_tile_dist(202300))")
