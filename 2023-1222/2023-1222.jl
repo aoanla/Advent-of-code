@@ -45,7 +45,7 @@ function parse_to_brickterval(s::String)
     Brickterval( Interval(ints[1]...), Interval(ints[2]...), Interval(ints[3]...), Set{Brickterval}(), false, 1)
 end
 
-bricks = open("input2") do f
+bricks = open("input") do f
     map(parse_to_brickterval, readlines(f)) 
 end 
 
@@ -77,7 +77,7 @@ function settle!(bricks)
                     push!(intersectors, l_brick_i)
                 end
             end 
-            println("CONSIDERED: $brick")
+
             isempty(intersectors) && continue #no intersection at this height, try lower 
             #else hits 
             hit = true
@@ -85,7 +85,6 @@ function settle!(bricks)
 
             if (layer+1) < brick.z.low
                 moved+=1
-                println("\tMOVED: $brick")
             end
             
             z_heigh = brick.z.high - brick.z.low 
@@ -108,7 +107,10 @@ function settle!(bricks)
 
             break #remember to stop checking now! 
         end
-        if hit == false #hit the ground 
+        if hit == false #hit the ground
+            if 1 < brick.z.low
+                moved+=1
+            end 
             z_heigh = brick.z.high - brick.z.low 
             brick.z.low = 1 
             brick.z.high = z_heigh + 1 
@@ -171,15 +173,12 @@ end
 function brute_force(es_vec, bricks)
     counter =0
     for eb in es_vec
-        println("...............................................")
-        println("REMOVING $eb")
 
         f_bricks = deepcopy(collect(filter(x->brick_eq(x,eb), bricks)))
         _, _, count = settle!(f_bricks)
-        println("Count: $count")
         counter+=count
     end
     counter 
 end
 
-println("$(brute_force(es_vec, bricks))") #this is *also* not the right answer somehow... what am I missing here? Somehow we're never considering stuff against the first item of the list?
+println("$(brute_force(es_vec, bricks))") #forgot that falling to the ground is a special case...
