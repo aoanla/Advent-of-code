@@ -182,6 +182,10 @@ odd = 1
 # Ce, Ee are easier - we only get even Ee separately from the small tries so we just have
 # N² EVENTILES + N Ee
 
+#I guess we could group these in powers of N and have 
+# (ODDTILE+EVENTILE) N² + (Ee + Co + ODDTILE) N + Co 
+# but who has time for that?
+
 EVENTILES = find_parity_at_dist(even, 132) #big enough to fill
 ODDTILES = find_parity_at_dist(odd, 132)
 CODD = find_parity_at_dist(odd, 65) 
