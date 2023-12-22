@@ -145,9 +145,6 @@ function part2!(ess_bricks, brick_stack)
         dep_essent = Set([e_brick])
         #the essential bricks dependant solely on this essential brick... 
         dependant_essentials = filter(x->issetequal(x.support, dep_essent) , ess_bricks[begin:e_brick_i-1])
-        #if layer == 0x008f
-        #    println("..............\n BRICK: $e_brick \n\tdeps: $dependant_essentials")
-        #end
         start_power = 0 #mapreduce(x->x.count, + , dependant_essentials) #start with the power of those essentials - no, just assign this to them in the stack
         #bricks will fall if their set of essentials supports is a subset of the supports we remove with this one essential, which is union us+our own dependant_essentials
         union!(dep_essent, dependant_essentials)
@@ -156,11 +153,8 @@ function part2!(ess_bricks, brick_stack)
         for s_layer ∈ (layer+1):length(brick_stack)
             
             bricks_to_consider = filter(x->x.support ⊆ dep_essent,  brick_stack[s_layer] ) 
-        #    if layer == 0x008f
-        #        println( "-------\n SLayer: $s_layer \n \t deps: $bricks_to_consider")
-        #    end
             start_power += mapreduce(x->x.count, +, bricks_to_consider; init = 0) #essential bricks have count > 1 for their dependencies
-            #count them, and then remove them from brick_stack layer: 
+            #count them, and then remove them from brick_stack layer, to avoid double counting
             brick_stack[s_layer] = filter(x->x.support ⊈ dep_essent, brick_stack[s_layer]) #iterating over just the slices doesn't work due to assignment
  
         end
@@ -168,6 +162,7 @@ function part2!(ess_bricks, brick_stack)
         tot+=start_power #bricks that fall *if this brick is deleted*
         e_brick.count = start_power + 1 #because if *this brick /falls/* it goes down and so does eveything on it (so start_power +1 )
     end
+    #at the end of this, why have some nodes *never* been removed? Are there really super stable elements at the base?
     #for l ∈ brick_stack
     #    println("$(l)") <-- ok, looking at a brick in the stack, something super awful is happening inside my datastructure probably because Julia, like Python, has hard to control reference v copy behaviour that makes this kind of thing impossible to debug
     #end
