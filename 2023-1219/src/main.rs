@@ -134,31 +134,42 @@ impl Node {
 
 
 /* process input into tree */
-fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Node 
+fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
     parse_str = lookup[start];
     //begin parsing
-    item = match parse_str[0] {
+    let item = match parse_str[0] {
         'x' => X, 
         'm' => M,
         'a' => A,
         's' => S, 
     };
-    condition = match parse_str[1] {
+    let cmp = match parse_str[1] {
         '>' => GT, 
         '<' => LT,
     }
-    value = //parse digits
-    left = match {
-        'A'     => Accept(None),
-        'R'     => Reject(None),
+    let val = //parse digits as i16
+    //these need regexes so we can get the whole string & also check "x" versus "xjajaj"
+    let left = match {
+        "A"     => Accept(None),
+        "R"     => Reject(None),
         n       => recursive_parse(n, &lookup),
     }   
-    right = match {
-        'A' => Accept(None),
-        'R' => Reject(None),
-        'x'|'m' //argg, some of the names start with an m!
+    let right = match {
+        "A"     => Accept(None),
+        "R"     => Reject(None),
+        "x"|"m"|"a"|"s" => recursive_anon( substring ), //make anonymous nodes for intermediate bits from the substring starting with this letter
+        n => recursive_parse(n, &lookup), //argg, some of the names start with an m!
     }
 
+    Box::new(Node { 
+        item: item, 
+        cmp: cmp,
+        left: left, 
+        right: right, 
+        val: val,
+        status: None, 
+    })
+}
 
 //probably just recursively regex out the null operations first 
 // ,[OP]A,A => ,A  etc
