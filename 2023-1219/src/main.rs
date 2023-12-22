@@ -129,6 +129,14 @@ impl Node {
 
 /* process input into tree */
 
+//probably just recursively regex out the null operations first 
+// ,[OP]A,A => ,A  etc
+
+//for line, reading from the end
+// while (items we don't recognise)
+//      add that item from the list of items
+// add our item we started with 
+//
 
 
 /* process the tree, DFS */
@@ -151,6 +159,8 @@ fn get_ranges(in_node: &mut Node) -> HashSet<XMASRange> {
 fn distinct_ranges(xmas_set: &mut HashSet<XMASRange>) -> i64 {
     //overlap stuff
 
+    //at overlaps - split the rightside range set into bits that don't overlap, splitting at x then a then m then s until all the new intervals are disjoint
+    //also consider merging adjacent intervals which are equal in the other directions. 
     
     //and sum to get answer
     xmas_set.iter().fold(0, |acc, item| acc + item.iter().product())
