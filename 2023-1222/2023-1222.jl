@@ -61,7 +61,7 @@ sort!(bricks, by=low_z)
 highest_brick_z = high_z(bricks[end])
 
 brick_stack = [ Brickterval[] for i in 1:highest_brick_z ]
-essential_bricks = Set{Tuple(Int,Int)}() #tuple of coords of the essential bricks now
+essential_bricks = Set{Tuple{Int,Int}}() #tuple of coords of the essential bricks now
 
 for brick in bricks 
     hit = false
@@ -108,13 +108,16 @@ lookup(st_i) = brick_stack[st_i[1]][st_i[2]]
 
 tot = 0 
 for e_brick_i in essential_bricks
-    power = length(e_brick_i.supports ) # start with the length of the supports list for this brick
+    e_brick = lookup(e_brick_i)
+    tot_dep_bricks = Set(e_brick.supports)
     stck = []
-    append!(stck, e_brick_i.supports )
+    append!(stck, e_brick.supports)
     while !isempty(stck)
         node = lookup(pop!(stck))
-        power += length(node.supports)  #this does not work if there's overlap in the sets of supported things of course - maybe we should just build this as we go initially
+        union!(tot_dep_bricks,  node.supports)
         append!(stck, node.supports)
     end
-    global tot += power
+    global tot += length(tot_dep_bricks)
 end 
+
+println("$tot") #this is the wrong answer, but I'm not sure if its because the wording of what's asked for is slightly ambiguous or if the algo is wrong
