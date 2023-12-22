@@ -125,6 +125,11 @@ end
 #println("$bricks")
 println("$(length(bricks) - length(essential_bricks))")
 
+function atlayer(layer, s)
+    if layer==0x008f
+        println(s)
+    end
+end
 
 #sort for highest essential brick first which is important for efficiency
 es_vec = sort(collect(essential_bricks), by = x->x.z.high, rev=true)
@@ -136,17 +141,24 @@ function part2!(ess_bricks, brick_stack)
         e_brick = ess_bricks[e_brick_i]
 
         layer = e_brick.z.high #don't scan layers *below* this brick!
+
         dep_essent = Set([e_brick])
         #the essential bricks dependant solely on this essential brick... 
         dependant_essentials = filter(x->issetequal(x.support, dep_essent) , ess_bricks[begin:e_brick_i-1])
+        #if layer == 0x008f
+        #    println("..............\n BRICK: $e_brick \n\tdeps: $dependant_essentials")
+        #end
         start_power = 0 #mapreduce(x->x.count, + , dependant_essentials) #start with the power of those essentials - no, just assign this to them in the stack
         #bricks will fall if their set of essentials supports is a subset of the supports we remove with this one essential, which is union us+our own dependant_essentials
         union!(dep_essent, dependant_essentials)
         #safe as to be essential a brick must have at least 1 thing above it
         #this hack is because it seems to be super difficult to overwrite a whole row of an array like this without using element indices, even with @views
         for s_layer ∈ (layer+1):length(brick_stack)
+            
             bricks_to_consider = filter(x->x.support ⊆ dep_essent,  brick_stack[s_layer] ) 
-
+        #    if layer == 0x008f
+        #        println( "-------\n SLayer: $s_layer \n \t deps: $bricks_to_consider")
+        #    end
             start_power += mapreduce(x->x.count, +, bricks_to_consider; init = 0) #essential bricks have count > 1 for their dependencies
             #count them, and then remove them from brick_stack layer: 
             brick_stack[s_layer] = filter(x->x.support ⊈ dep_essent, brick_stack[s_layer]) #iterating over just the slices doesn't work due to assignment
@@ -156,10 +168,16 @@ function part2!(ess_bricks, brick_stack)
         tot+=start_power #bricks that fall *if this brick is deleted*
         e_brick.count = start_power + 1 #because if *this brick /falls/* it goes down and so does eveything on it (so start_power +1 )
     end
+    #for l ∈ brick_stack
+    #    println("$(l)") <-- ok, looking at a brick in the stack, something super awful is happening inside my datastructure probably because Julia, like Python, has hard to control reference v copy behaviour that makes this kind of thing impossible to debug
+    #end
     tot
 end
 
-#println("$(part2!(es_vec, brick_stack))") #also too low :(
+println("$(part2!(es_vec, brick_stack))") #also too low :(
+
+#println("$(map(e->(e.count, e.z.low), es_vec))")
+
 
 
 #we could just brute-force this by doing the "falling thing" again with the "sorted" list of bricks after we settle them once (but removing the "essential" brick each time)
@@ -181,4 +199,6 @@ function brute_force(es_vec, bricks)
     counter 
 end
 
-println("$(brute_force(es_vec, bricks))") #forgot that falling to the ground is a special case...
+#println("$(brute_force(es_vec, bricks))") #forgot that falling to the ground is a special case...
+#    61555
+#
