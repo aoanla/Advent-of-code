@@ -20,7 +20,7 @@ Nodes = Set{CartesianIndex{2}}()
 Edges = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}()
 
 
-d = read("input2")
+d = read("input")
 width = findfirst(==(UInt8('\n')), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
 
@@ -162,7 +162,7 @@ println("Exit: $e_node")
 const Edge_v = Tuple{CartesianIndex{2},CartesianIndex{2}}
 const State = Tuple{CartesianIndex{2}, Set{Edge_v}}
 
-#OKAY, Dijkstra
+#OKAY, Dijkstra - nope, this does not fit into my RAM - does the state need to store this stuff?
 function longest_dist(start, Edges, exit_n)
     
     dist = Dict{State,Int}()
