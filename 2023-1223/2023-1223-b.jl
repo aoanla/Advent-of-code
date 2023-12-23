@@ -156,16 +156,12 @@ Edge_i = zeros(UInt64, length(Node_v))
 
 #contract_edges!(Edges);
 
-Edge_i = zeros(UInt64, length(Node_v))
-
-const Edge_v = Tuple{CartesianIndex{2},CartesianIndex{2}}
-const State = Tuple{Int8, BitArray{2}}
-
 #Ok, DFS then. 
 
 function DFS(v, Edges, visited, exit_v)
         v == exit_v && return 0 #hit the exit 
         longest = 0
+        visited = deepcopy(visited) #SIGH, for gods sake, Julia, this is why Rust, C++ et all all have explicit reference v copy semantics.,
         visited[v] = true 
         for next_e ∈ keys(Edges[Node_v[v]])
             visited[v_Node[next_e]] && continue #skip visited nodes 
