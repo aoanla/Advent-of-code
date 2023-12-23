@@ -118,6 +118,7 @@ end
 e_node = build_graph!(Nodes, Edges) 
 
 #honestly, I can't see any edges that could be contracted... also there's only 36 nodes anyway!
+#
 #=
 function contract_edges!(Edges)
     #find cases where a node has only two edges (to E1, E2), and replace the node and the edges with single edge E1->E2
@@ -152,14 +153,14 @@ const State = Tuple{CartesianIndex{2}, Dict{CartesianIndex{2}, Dict{CartesianInd
 #OKAY, Dijkstra's memory bounds are awful, yess. Let's try UCS 
 function longest_dist(start, Edges, exit_n)
     
-    explored = Set{State}()
+    explored = Dict{State}{Int}()
+    soln = 0
                                 #node                       #available edges                                Distance
     front = PriorityQueue{State, Int}(Base.Order.Reverse)
     enqueue!(front, (start, Edges), 0 )
-    while !isempty(front)
+    println("Peek: $(peek(front))")
+    while !isempty(front) && peek(front)[2] >= soln #keep going until we can't get a better soln from a candidate on the front
         state, s_dist = dequeue_pair!(front)
-        state[1] == exit_n && return s_dist 
-        push!(explored, state);
 
         #Edges   #from this node                 
         for (next_node,next_dist) ∈ pairs(state[2][state[1]] ) 
@@ -168,14 +169,21 @@ function longest_dist(start, Edges, exit_n)
             delete!(cand_edges[state[1]], next_node)
             delete!(cand_edges[next_node], state[1])
             cand_state = (next_node, cand_edges)
-            cand_state ∈ explored && continue            
-            if !haskey(front, cand_state) || front[cand_state] < cand_dist  
+            println("$(state[1]==exit_n)")
+            if !haskey(explored, cand_state) || explored[cand_state] < cand_dist
+                explored[cand_state] = cand_dist 
                 front[cand_state] = cand_dist
+                if state[1] == exit_n && soln < cand_dist 
+                    soln = cand_dist
+                end
             end
         end
     end
-    nothing
+    soln
 end 
+#        state[1] == exit_n && return s_dist 
+#        push!(explored, state);
+
 
 dists =  longest_dist(start, Edges, e_node )
 
