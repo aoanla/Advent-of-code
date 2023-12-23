@@ -156,60 +156,27 @@ Edge_i = zeros(UInt64, length(Node_v))
 
 #contract_edges!(Edges);
 
-#=
-println("Nodes: $Nodes")
-println("")
-println("Edges: $Edges")
-println("")
-println("Exit: $e_node")
-=#
-
-### TODO: Longest Path via Dijkstra . State vector is (NODE, FROMNODE) at any point because this also lets us remove that edge as state change
-
-#I think my state vector is too big - do I need to store the previous paths in such a big structure? Also, I think I should be able to use Dijkstra - 
-# even though the first attempt used up all 16GB on my machine!
 Edge_i = zeros(UInt64, length(Node_v))
 
 const Edge_v = Tuple{CartesianIndex{2},CartesianIndex{2}}
 const State = Tuple{Int8, BitArray{2}}
 
-#OKAY, Dijkstra - nope, this does not fit into my RAM - does the state need to store this stuff?
-function longest_dist(start, Edges, exit_n)
-    
-    dist = Dict{State,Int}()
-    soln = 0
-                                #node                       #available edges                                Distance
-    queue = PriorityQueue{State, Int}(Base.Order.Reverse)
-    enqueue!(queue, (v_Node[start], trues(nNodes,nNodes)), 0 )
+#Ok, DFS then. 
 
-    while !isempty(queue)  #keep going until we can't get a better soln from a candidate on the front
-        state, s_dist = dequeue_pair!(queue)
-
-        #Edges   #from this node                 
-        for next_node ∈ filter(x->state[2][state[1],v_Node[x]], keys(Edges[Node_v[state[1]]]) ) #can't take already taken edges
-            #println("\tCandidate: $next_node")
-            cand_dist = s_dist + Edges[Node_v[state[1]]][next_node]
-            cand_edges = deepcopy(state[2])
-            cand_edges[state[1],v_Node[next_node]] = false
-            cand_edges[v_Node[next_node],state[1]] = false
-            cand_state = (v_Node[next_node], cand_edges)
-            #println("State: $cand_state")
-            if !haskey(dist, cand_state) || dist[cand_state] < cand_dist
-                dist[cand_state] = cand_dist 
-                queue[cand_state] = cand_dist
-                if next_node == exit_n && soln < cand_dist 
-                    soln = cand_dist
-                end
-            end
+function DFS(v, Edges, visited, exit_v)
+        v == exit_v && return 0 #hit the exit 
+        longest = 0
+        visited[v] = true 
+        for next_e ∈ keys(Edges[Node_v[v]])
+            visited[v_Node[next_e]] && continue #skip visited nodes 
+            longest_seg = DFS(v_Node[next_e], Edges, visited, exit_v)
+            longest = max(longest, longest_seg + Edges[Node_v[v]][next_e]) 
         end
-    end
-    soln
+    longest
 end 
-#        state[1] == exit_n && return s_dist 
-#        push!(explored, state);
 
 
-dists =  longest_dist(start, Edges, e_node )
+dists =  DFS(v_Node[start], Edges, falses(nNodes), v_Node[e_node] )
 
                 #the dist             #the node
 #pttwo =  maximum(map(p->p[2], filter(p->p[1][1]==e_node, collect(pairs(dists))  ) )  )
