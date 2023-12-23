@@ -20,7 +20,7 @@ Nodes = Set{CartesianIndex{2}}()
 Edges = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}()
 
 
-d = read("input")
+d = read("input2")
 width = findfirst(==(UInt8('\n')), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
 
@@ -144,9 +144,7 @@ function contract_edges!(Edges)
 end
 #
 
-contract_edges!(Edges);
-
-exit()
+#contract_edges!(Edges);
 
 #=
 println("Nodes: $Nodes")
@@ -158,33 +156,35 @@ println("Exit: $e_node")
 
 ### TODO: Longest Path via Dijkstra . State vector is (NODE, FROMNODE) at any point because this also lets us remove that edge as state change
 
-const EdgeDict = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}
-const State = Tuple{CartesianIndex{2}, Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}} }
+#I think my state vector is too big - do I need to store the previous paths in such a big structure? Also, I think I should be able to use Dijkstra - 
+# even though the first attempt used up all 16GB on my machine!
 
-#OKAY, Dijkstra's memory bounds are awful, yess. Let's try UCS 
+const Edge_v = Tuple{CartesianIndex{2},CartesianIndex{2}}
+const State = Tuple{CartesianIndex{2}, Set{Edge_v}}
+
+#OKAY, Dijkstra
 function longest_dist(start, Edges, exit_n)
     
-    explored = Dict{State}{Int}()
+    dist = Dict{State,Int}()
     soln = 0
                                 #node                       #available edges                                Distance
-    front = PriorityQueue{State, Int}(Base.Order.Reverse)
-    enqueue!(front, (start, Edges), 0 )
-    println("Peek: $(peek(front))")
-    while !isempty(front) && peek(front)[2] >= soln #keep going until we can't get a better soln from a candidate on the front
-        state, s_dist = dequeue_pair!(front)
+    queue = PriorityQueue{State, Int}(Base.Order.Reverse)
+    enqueue!(queue, (start, Set{Edge_v}()), 0 )
+
+    while !isempty(queue)  #keep going until we can't get a better soln from a candidate on the front
+        state, s_dist = dequeue_pair!(queue)
 
         #Edges   #from this node                 
-        for (next_node,next_dist) ∈ pairs(state[2][state[1]] ) 
-            cand_dist = s_dist + next_dist
-            cand_edges = deepcopy(state[2]) #the edges for this candidate are removed as we go down them if we do this
-            delete!(cand_edges[state[1]], next_node)
-            delete!(cand_edges[next_node], state[1])
+        for next_node ∈ filter(x->(x,state[1])∉state[2], keys(Edges[state[1]]) ) #can't take already taken edges
+            #println("\tCandidate: $next_node")
+            cand_dist = s_dist + Edges[state[1]][next_node]
+            cand_edges = state[2] ∪ Set([(state[1], next_node), (next_node, state[1])])#build up edges as we go
             cand_state = (next_node, cand_edges)
-            println("$(state[1]==exit_n)")
-            if !haskey(explored, cand_state) || explored[cand_state] < cand_dist
-                explored[cand_state] = cand_dist 
-                front[cand_state] = cand_dist
-                if state[1] == exit_n && soln < cand_dist 
+            #println("State: $cand_state")
+            if !haskey(dist, cand_state) || dist[cand_state] < cand_dist
+                dist[cand_state] = cand_dist 
+                queue[cand_state] = cand_dist
+                if next_node == exit_n && soln < cand_dist 
                     soln = cand_dist
                 end
             end
