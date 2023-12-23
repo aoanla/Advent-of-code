@@ -20,7 +20,7 @@ mutable struct Brickterval
     x:: Interval
     y:: Interval
     z:: Interval
-    support::Set{Brickterval} #Set of *essential* bricks supporting its chain- reset by being on an essential brick directly
+    support::Set{Int} #Set of *essential* bricks supporting its chain- reset by being on an essential brick directly
     essential::Bool #is this brick essential [does it have supports == 1 anywhere in that lit]
     count::Int #power count for essential bricks "how many bricks fall if I go away"
 end 
@@ -42,7 +42,7 @@ function parse_to_brickterval(s::String)
     lows, highs = split(s, '~')
     ints = collect(map(sort_tuple, zip( parse.(UInt16, split(lows,',')), parse.(UInt16, split(highs, ',') )) ))
 
-    Brickterval( Interval(ints[1]...), Interval(ints[2]...), Interval(ints[3]...), Set{Brickterval}(), false, 1)
+    Brickterval( Interval(ints[1]...), Interval(ints[2]...), Interval(ints[3]...), Set{Int}(), false, 1)
 end
 
 bricks = open("input") do f
@@ -63,7 +63,7 @@ function settle!(bricks)
     highest_brick_z = high_z(bricks[end])
 
     brick_stack = [ Brickterval[] for i in 1:highest_brick_z ]
-    essential_bricks = Set{Brickterval}() #vector of the essential bricks now
+    essential_bricks = Brickterval[] #vector of the essential bricks now
     moved =0
 
     for brick in bricks
@@ -96,9 +96,13 @@ function settle!(bricks)
             #                                                                                (a brick could bridge two essentials higher up)
 
             if sups == 1#this brick is essential because it's critical to our brick
-                brick_stack[layer][intersectors[begin]].essential = true 
-                push!(essential_bricks, brick_stack[layer][intersectors[begin]] ) 
-                brick.support = Set(brick_stack[layer][intersectors]) #set will turn our vec into a set okay even with 1 elem
+                if brick_stack[layer][intersectors[begin]].essential == true #we already found this brick essential
+                    brick.support = Set([findfirst(==(brick_stack[layer][intersectors[begin]]), essential_bricks)])
+                else  
+                    brick_stack[layer][intersectors[begin]].essential = true 
+                    push!(essential_bricks, brick_stack[layer][intersectors[begin]] ) 
+                    brick.support = Set([length(essential_bricks)]) #we now just use the essential_bricks index, which must be the current length 
+                end
             else #sups is bigger
                 brick.support = mapreduce(x->x.support , ∪, brick_stack[layer][intersectors])
             end
@@ -123,34 +127,31 @@ end
 (brick_stack, essential_bricks, _) = settle!(bricks)
 
 #println("$bricks")
-println("$(length(bricks) - length(essential_bricks))")
+println("$(length(bricks)), $(length(essential_bricks))")
 
-function atlayer(layer, s)
-    if layer==0x008f
-        println(s)
-    end
-end
 
 #sort for highest essential brick first which is important for efficiency
-es_vec = sort(collect(essential_bricks), by = x->x.z.high, rev=true)
 
-function part2!(ess_bricks, brick_stack)
+# a sorted list of (indices) into the (not sorted) essential_brick vec 
+es_vec = sort(collect(eachindex(essential_bricks)), by = x->essential_bricks[x].z.high, rev=true)
+
+function part2!(es_vec, brick_stack)
     tot = 0 
-    for e_brick_i ∈ eachindex(ess_bricks)
+    for e_brick_i ∈ es_vec
 
-        e_brick = ess_bricks[e_brick_i]
+        e_brick = essential_bricks[e_brick_i]
 
         layer = e_brick.z.high #don't scan layers *below* this brick!
 
-        dep_essent = Set([e_brick])
+        dep_essent = Set([e_brick_i])
         #the essential bricks dependant solely on this essential brick... 
-        dependant_essentials = filter(x->issetequal(x.support, dep_essent) , ess_bricks[begin:e_brick_i-1])
+        dependant_essentials = filter(x->issetequal(essential_bricks[x].support, dep_essent) , es_vec)
         start_power = 0 #mapreduce(x->x.count, + , dependant_essentials) #start with the power of those essentials - no, just assign this to them in the stack
         #bricks will fall if their set of essentials supports is a subset of the supports we remove with this one essential, which is union us+our own dependant_essentials
         union!(dep_essent, dependant_essentials)
         #safe as to be essential a brick must have at least 1 thing above it
         #this hack is because it seems to be super difficult to overwrite a whole row of an array like this without using element indices, even with @views
-        for s_layer ∈ (layer+1):length(brick_stack)
+        for s_layer ∈ (layer+1):length(brick_stack) #(layer+1):length(brick_stack)
             
             bricks_to_consider = filter(x->x.support ⊆ dep_essent,  brick_stack[s_layer] ) 
             start_power += mapreduce(x->x.count, +, bricks_to_consider; init = 0) #essential bricks have count > 1 for their dependencies
@@ -160,16 +161,25 @@ function part2!(ess_bricks, brick_stack)
         end
 
         tot+=start_power #bricks that fall *if this brick is deleted*
-        e_brick.count = start_power + 1 #because if *this brick /falls/* it goes down and so does eveything on it (so start_power +1 )
+        essential_bricks[e_brick_i].count = start_power + 1 #because if *this brick /falls/* it goes down and so does eveything on it (so start_power +1 )
     end
     #at the end of this, why have some nodes *never* been removed? Are there really super stable elements at the base?
-    #for l ∈ brick_stack
-    #    println("$(l)") <-- ok, looking at a brick in the stack, something super awful is happening inside my datastructure probably because Julia, like Python, has hard to control reference v copy behaviour that makes this kind of thing impossible to debug
-    #end
+    err = 0
+    for l ∈ brick_stack
+        if !isempty(l)
+            err += mapreduce(x->x.count, +, l; init = 0)
+            println("$(l)") 
+        end
+    end
+    println("Error is $err") #not big enough to account for the difference (only ~1457)
     tot
 end
 
-println("$(part2!(es_vec, brick_stack))") #also too low :(
+println("$(part2!(es_vec, brick_stack))") #out by 26919 (@ 34636) 
+
+                #we get a bigger number (35337) if we iterate over *All* layers per essential brick rather than justthe layers above them... which can't be right
+                #so there's something wrong with our datastructure (But not in a way that counts essential bricks wrongly)
+                # 34571 if we go layer:end rather than layer+1:end
 
 #println("$(map(e->(e.count, e.z.low), es_vec))")
 
