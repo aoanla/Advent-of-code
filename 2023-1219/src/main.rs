@@ -3,8 +3,8 @@
     (This is also because I find it more comfy writing an actual tree in a language with explicit pointers)
 
 */
-
-//use regex::Regex;
+use once_cell::sync::Lazy; //for "static Regexes"
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs::read_to_string;
 
@@ -132,33 +132,44 @@ impl Node {
 
 }
 
-
-/* process input into tree */
 fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
     parse_str = lookup[start];
+    recursive_anon(&parse_str, &lookup)
+}
+
+/* process input into tree */
+fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
+    static re Lazy<Regex> = Lazy::new(|| regex.Regex::new(r"([xmas])([><])([0-9]+):([^,]),(.*)$").unwrap() );
+    let Some(captures) = re.captures(parse_str);
     //begin parsing
-    let item = match parse_str[0] {
+    let item = match &captures[1] {
         'x' => X, 
         'm' => M,
         'a' => A,
         's' => S, 
     };
-    let cmp = match parse_str[1] {
+    let cmp = match &captures[2] {
         '>' => GT, 
         '<' => LT,
     }
-    let val = //parse digits as i16
+    let val = &captures[3].parse::<i16>().unwrap() //parse digits as i16
     //these need regexes so we can get the whole string & also check "x" versus "xjajaj"
-    let left = match {
+    let left = match &captures[4] {
         "A"     => Accept(None),
         "R"     => Reject(None),
         n       => recursive_parse(n, &lookup),
     }   
-    let right = match {
-        "A"     => Accept(None),
-        "R"     => Reject(None),
-        "x"|"m"|"a"|"s" => recursive_anon( substring ), //make anonymous nodes for intermediate bits from the substring starting with this letter
-        n => recursive_parse(n, &lookup), //argg, some of the names start with an m!
+    //gnarly splitting on if there's a } or a <> in the second position of this capture 
+    // either [xmas]<>... (in which case recursively expand)
+    // or  [AR]} in which case we're at the end
+    // or glarb} in which case we go to node glarb
+    let right = match &captures[5][1] {
+        '}' =>  match &captures[5][0] {
+            'A' => Accept(None),
+            'R' => Reject(None),
+            },
+        '<' | '>' => recursive_anon(&captures[5], &lookup), //make anonymous nodes for intermediate bits from the substring starting with this letter
+        n => recursive_parse(&captures[5][:len(&captures[5])-1], &lookup),
     }
 
     Box::new(Node { 
@@ -179,7 +190,7 @@ fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
 //      add that item from the list of items
 // add our item we started with 
 //
-fn parse(s: &str) -> Tree {
+fn parse(s: &str) -> Box<Node> {
     let buffer = fs::read_to_string(s).unwrap(); 
 
   /* stuff to remove the "null operations" that branch to the same thing (A or R) on both sides
@@ -198,17 +209,16 @@ fn parse(s: &str) -> Tree {
 */
     let temp_dict = HashMap::<&str, &str>::new();
     //stick our name -> { } stuff into this for easier lookup
+    for line in buffer.readlines() {
+        key, val = line.split("{") ;
+        temp_dict[key] = val
+    }
 
     //I feel like we should sort this input somehow to make making the tree easier
     //maybe we at least ensure we start with "in" as the first node?
     in_node = recursive_parse("in", &temp_dict)
-
-
-    //split line on 
-
-    //winnow 
-    separated(1.., op_and_left ,   ',')
-    one_of(['x','m','a','s']).
+    //and return our in node (along with the rest of the tree?)
+    in_node 
 }
 
 
