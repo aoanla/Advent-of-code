@@ -7,8 +7,10 @@
 Nodes = Set{CartesianIndex{2}}()
                 #out                    in              len
 Edges = Dict{CartesianIndex{2}, Set{Tuple{CartesianIndex{2}, Int}}}()
+            #in                         out                 len
+InEdges = Dict{CartesianIndex{2}, Set{Tuple{CartesianIndex{2}, Int}}}()
 
-d = read("input2")
+d = read("input")
 width = findfirst(==(UInt8('\n')), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
 
@@ -55,9 +57,8 @@ function follow_line(here, pos_vectors)
     (here, dist, exit_node) 
 end
 
-#follow_line(start, pos_vectors)
 
-function build_graph!(Nodes, Edges)
+function build_graph!(Nodes, Edges, InEdges)
     nodes_q = CartesianIndex{2}[]
     exit_node = nothing
     start = CartesianIndex((1,2))
@@ -66,12 +67,13 @@ function build_graph!(Nodes, Edges)
     first_node_entry, dist, _ = follow_line(start, setdiff(dirs, Set([ch_to_dir[up]])))
     first_node = first_node_entry + ch_to_dir[matrix[first_node_entry]]
     push!(nodes_q, first_node)
-    push!(Edges[start], (first_node, dist) )
+    push!(Edges[start], (first_node, dist -1) ) #S doesn't count as a step apparently
+
     while !isempty(nodes_q)
         new_node = pop!(nodes_q)
-        println("Processing node: $new_node")
+
         new_node ∈ Nodes && continue ; #already processed
-        #new_node = node_entry + ch_to_dir[matrix[node_entry]]
+
         push!(Nodes, new_node) 
         #we only explore *outbound* edges - the map returns us (first dot after an outbound, outbound_directions) tuples
         out_nodes = map(d->(new_node + 2d, setdiff(dirs, Set([-d]))), collect(filter(d->is_outbound(matrix[new_node+d], d), dirs)) )
@@ -80,8 +82,9 @@ function build_graph!(Nodes, Edges)
             end_node_entry, dist, exit_n = follow_line(on...) 
             if exit_n #we found the exit
                 exit_node = end_node_entry 
-                push!(Nodes, end_node_entry)
-                push!(Edges[new_node], (end_node_entry, dist+2))
+                push!(Nodes, exit_node)
+                push!(Edges[new_node], (exit_node, dist+2))
+                Edges[exit_node] = Set{Tuple{CartesianIndex{2}, Int}}()
                 continue #the exit has no exits... 
             end
             #normal node
@@ -92,13 +95,79 @@ function build_graph!(Nodes, Edges)
             
         end
     end
+
+    for (out_v,v) ∈ pairs(Edges)
+        for (in_v,dist) ∈ v
+            if !haskey(InEdges, in_v)
+                InEdges[in_v] = Set{Tuple{CartesianIndex{2},Int}}()
+            end
+            push!(InEdges[in_v], (out_v, dist))
+        end
+    end
+    
+
     exit_node
 end
 
-e_node = build_graph!(Nodes, Edges)
+e_node = build_graph!(Nodes, Edges, InEdges) 
 
+#=
 println("Nodes: $Nodes")
 println("")
 println("Edges: $Edges")
 println("")
 println("Exit: $e_node")
+=#
+
+#topo visit
+function topo_visit(v, mark_set, tmp_mark_set, sorted_vec)
+    v ∈ mark_set && return true
+    v ∈ tmp_mark_set && return false #loop!
+
+    push!(tmp_mark_set, v)
+    for (vv, _) ∈ Edges[v] 
+        topo_visit(vv, mark_set, tmp_mark_set, sorted_vec)
+    end
+
+    pop!(tmp_mark_set, v)
+    push!(mark_set, v)
+    pushfirst!(sorted_vec, v)
+    return true
+end 
+
+
+#topo sort 
+function topo_sort!(Nodes, Edges)
+    sorted_vec = CartesianIndex{2}[]
+    mark_set = Set{CartesianIndex{2}}()
+    tmp_mark_set = Set{CartesianIndex{2}}()
+    while !isempty(Nodes)
+        v = pop!(Nodes)
+        topo_visit(v, mark_set, tmp_mark_set, sorted_vec)
+    end
+    Nodes = mark_set #we should have marked everything
+    sorted_vec #sorted nodes
+end 
+
+sorted = topo_sort!(Nodes, Edges)
+
+function longest_dist(start, sorted_nodes, Edges, exit_n)
+    dists = Dict{CartesianIndex{2}, Int}()
+    for k ∈ sorted_nodes
+        dists[k] = 0
+    end
+    idx = findfirst(==(start), sorted_nodes)
+    for u ∈ sorted_nodes[idx:end]
+        for (v,d) ∈ Edges[u]
+            if  dists[v] < dists[u]+d
+                dists[v] = dists[u] + d 
+            end
+        end
+    end
+    dists[exit_n]
+end 
+
+println("$(longest_dist(start, sorted, Edges, e_node))")
+
+
+    
