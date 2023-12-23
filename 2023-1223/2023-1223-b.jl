@@ -20,7 +20,7 @@ Nodes = Set{CartesianIndex{2}}()
 Edges = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}()
 
 
-d = read("input2")
+d = read("input")
 width = findfirst(==(UInt8('\n')), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
 
@@ -119,23 +119,34 @@ e_node = build_graph!(Nodes, Edges)
 
 #honestly, I can't see any edges that could be contracted... also there's only 36 nodes anyway!
 #
-#=
+#
 function contract_edges!(Edges)
     #find cases where a node has only two edges (to E1, E2), and replace the node and the edges with single edge E1->E2
         #!!!! could be problematic if an edge E1-E2 already exists!!!
-    contractable = filter(p->length(p[2])==2, pairs(Edges) )
+    contractable = filter(p->length(p[2])==2, collect(pairs(Edges)) )
+    println("Contracting: $contractable")
     while !isempty(contractable)
         for (k,v) ∈ contractable
-            new_edges = keys(v)
+            far_nodes = collect(keys(v))
             dist = sum(values(v)); #distance is the sum (dist to each from here)
-            #delete old edges 
+            #delete old edges
+            delete!(Edges[k], far_nodes[1])
+            delete!(Edges[k], far_nodes[2])
+            delete!(Edges[far_nodes[1]], k)
+            delete!(Edges[far_nodes[2]], k)
             #add new edge
+            Edges[far_nodes[1]][far_nodes[2]] = dist 
+            Edges[far_nodes[2]][far_nodes[1]] = dist 
         end
-        contractable = filter(p->length(p[2])==2, pairs(Edges) )
+        contractable = filter(p->length(p[2])==2, collect(pairs(Edges)) )
         #try again incase now another node is contractable
     end 
 end
-=#
+#
+
+contract_edges!(Edges);
+
+exit()
 
 #=
 println("Nodes: $Nodes")
