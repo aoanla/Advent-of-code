@@ -8,16 +8,19 @@
 
 #In the absence of a better idea, then, this is Dijkstra's Algorithm again but with the path state including the edge we entered each node from so we don't go back. 
 
+using Pkg
+Pkg.activate(".")
+using DataStructures #I really don't to write my own PriorityQueue
+
 
 #TODO: Dijkstra rather than [Toposort, DAG longest path]
 
 Nodes = Set{CartesianIndex{2}}()
                 #out                    in              len
-Edges = Dict{CartesianIndex{2}, Set{Tuple{CartesianIndex{2}, Int}}}()
-            #in                         out                 len
-#InEdges = Dict{CartesianIndex{2}, Set{Tuple{CartesianIndex{2}, Int}}}()
+Edges = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}()
 
-d = read("input")
+
+d = read("input2")
 width = findfirst(==(UInt8('\n')), d);
 matrix = transpose(reshape(d, width, :)[begin:end-1, :]);
 
@@ -93,13 +96,16 @@ function build_graph!(Nodes, Edges)
             if exit_n #we found the exit
                 exit_node = end_node_entry 
                 push!(Nodes, exit_node)
-                push!(Edges[new_node], (exit_node, dist+2))
+                Edges[new_node][exit_node] = dist+2
                 Edges[exit_node] = Dict{CartesianIndex{2}, Int}()
                 continue #the exit has no exits... 
             end
             #normal node
             end_node = end_node_entry + ch_to_dir[matrix[end_node_entry]]
             Edges[new_node][end_node] = dist+2; #dist +2 because we include the . on new node and the outbound >^v<
+            if !haskey(Edges, end_node)
+                Edges[end_node] = Dict{CartesianIndex{2}, Int}()
+            end
             Edges[end_node][new_node] = dist+2;
             #if the node we found hasn't been traced yet, add it to the queue
             end_node ∉ Nodes && push!(nodes_q, end_node) ;
@@ -111,7 +117,8 @@ end
 
 e_node = build_graph!(Nodes, Edges) 
 
-
+#honestly, I can't see any edges that could be contracted... also there's only 36 nodes anyway!
+#=
 function contract_edges!(Edges)
     #find cases where a node has only two edges (to E1, E2), and replace the node and the edges with single edge E1->E2
         #!!!! could be problematic if an edge E1-E2 already exists!!!
@@ -127,6 +134,7 @@ function contract_edges!(Edges)
         #try again incase now another node is contractable
     end 
 end
+=#
 
 #=
 println("Nodes: $Nodes")
@@ -138,24 +146,43 @@ println("Exit: $e_node")
 
 ### TODO: Longest Path via Dijkstra . State vector is (NODE, FROMNODE) at any point because this also lets us remove that edge as state change
 
+const EdgeDict = Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}}
+const State = Tuple{CartesianIndex{2}, Dict{CartesianIndex{2}, Dict{CartesianIndex{2}, Int}} }
 
-function longest_dist(start, sorted_nodes, Edges, exit_n)
-    dists = Dict{CartesianIndex{2}, Int}()
-    for k ∈ sorted_nodes
-        dists[k] = 0
-    end
-    idx = findfirst(==(start), sorted_nodes)
-    for u ∈ sorted_nodes[idx:end]
-        for (v,d) ∈ Edges[u]
-            if  dists[v] < dists[u]+d
-                dists[v] = dists[u] + d 
+#OKAY, Dijkstra's memory bounds are awful, yess. Let's try UCS 
+function longest_dist(start, Edges, exit_n)
+    
+    explored = Set{State}()
+                                #node                       #available edges                                Distance
+    front = PriorityQueue{State, Int}(Base.Order.Reverse)
+    enqueue!(front, (start, Edges), 0 )
+    while !isempty(front)
+        state, s_dist = dequeue_pair!(front)
+        state[1] == exit_n && return s_dist 
+        push!(explored, state);
+
+        #Edges   #from this node                 
+        for (next_node,next_dist) ∈ pairs(state[2][state[1]] ) 
+            cand_dist = s_dist + next_dist
+            cand_edges = deepcopy(state[2]) #the edges for this candidate are removed as we go down them if we do this
+            delete!(cand_edges[state[1]], next_node)
+            delete!(cand_edges[next_node], state[1])
+            cand_state = (next_node, cand_edges)
+            cand_state ∈ explored && continue            
+            if !haskey(front, cand_state) || front[cand_state] < cand_dist  
+                front[cand_state] = cand_dist
             end
         end
     end
-    dists[exit_n]
+    nothing
 end 
 
-println("$(longest_dist(start, sorted, Edges, e_node))")
+dists =  longest_dist(start, Edges, e_node )
+
+                #the dist             #the node
+#pttwo =  maximum(map(p->p[2], filter(p->p[1][1]==e_node, collect(pairs(dists))  ) )  )
+
+println("$(dists)")
 
 
     

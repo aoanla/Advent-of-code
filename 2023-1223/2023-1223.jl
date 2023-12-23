@@ -146,10 +146,10 @@ function topo_sort!(Nodes, Edges)
         topo_visit(v, mark_set, tmp_mark_set, sorted_vec)
     end
     Nodes = mark_set #we should have marked everything
-    sorted_vec #sorted nodes
+    (Nodes, sorted_vec) #sorted nodes
 end 
 
-sorted = topo_sort!(Nodes, Edges)
+(Nodes, sorted) = topo_sort!(Nodes, Edges)
 
 function longest_dist(start, sorted_nodes, Edges, exit_n)
     dists = Dict{CartesianIndex{2}, Int}()
@@ -169,5 +169,5 @@ end
 
 println("$(longest_dist(start, sorted, Edges, e_node))")
 
-
+println("Number of nodes: $(length(Nodes))")
     
