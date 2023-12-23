@@ -144,6 +144,16 @@ function contract_edges!(Edges)
 end
 #
 
+#okay, let's go for a more memory-efficient representation
+Node_v = collect(values(Nodes))
+v_Node = Dict{CartesianIndex{2}, Int}()
+for (i,n) ∈ enumerate(Node_v)
+    v_Node[n] = i
+end
+nNodes = length(Node_v)
+
+Edge_i = zeros(UInt64, length(Node_v))
+
 #contract_edges!(Edges);
 
 #=
@@ -158,9 +168,10 @@ println("Exit: $e_node")
 
 #I think my state vector is too big - do I need to store the previous paths in such a big structure? Also, I think I should be able to use Dijkstra - 
 # even though the first attempt used up all 16GB on my machine!
+Edge_i = zeros(UInt64, length(Node_v))
 
 const Edge_v = Tuple{CartesianIndex{2},CartesianIndex{2}}
-const State = Tuple{CartesianIndex{2}, Set{Edge_v}}
+const State = Tuple{Int8, BitArray{2}}
 
 #OKAY, Dijkstra - nope, this does not fit into my RAM - does the state need to store this stuff?
 function longest_dist(start, Edges, exit_n)
@@ -169,17 +180,19 @@ function longest_dist(start, Edges, exit_n)
     soln = 0
                                 #node                       #available edges                                Distance
     queue = PriorityQueue{State, Int}(Base.Order.Reverse)
-    enqueue!(queue, (start, Set{Edge_v}()), 0 )
+    enqueue!(queue, (v_Node[start], trues(nNodes,nNodes)), 0 )
 
     while !isempty(queue)  #keep going until we can't get a better soln from a candidate on the front
         state, s_dist = dequeue_pair!(queue)
 
         #Edges   #from this node                 
-        for next_node ∈ filter(x->(x,state[1])∉state[2], keys(Edges[state[1]]) ) #can't take already taken edges
+        for next_node ∈ filter(x->state[2][state[1],v_Node[x]], keys(Edges[Node_v[state[1]]]) ) #can't take already taken edges
             #println("\tCandidate: $next_node")
-            cand_dist = s_dist + Edges[state[1]][next_node]
-            cand_edges = state[2] ∪ Set([(state[1], next_node), (next_node, state[1])])#build up edges as we go
-            cand_state = (next_node, cand_edges)
+            cand_dist = s_dist + Edges[Node_v[state[1]]][next_node]
+            cand_edges = deepcopy(state[2])
+            cand_edges[state[1],v_Node[next_node]] = false
+            cand_edges[v_Node[next_node],state[1]] = false
+            cand_state = (v_Node[next_node], cand_edges)
             #println("State: $cand_state")
             if !haskey(dist, cand_state) || dist[cand_state] < cand_dist
                 dist[cand_state] = cand_dist 
