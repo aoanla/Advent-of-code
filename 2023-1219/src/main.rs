@@ -37,9 +37,9 @@ enum Item {
 impl Interval {
     fn gt(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
         if self.h <= lim { //all of the range is below lim, so none goes left
-            (None, Some(self))
+            (None, Some(*self))
         } else if self.l > lim { //all of the range is above lim, so none goes right
-            (Some(self),None)
+            (Some(*self),None)
         } else {
             (Some(Interval{l:lim+1,h:self.h}), Some(Interval{l:self.l,h:lim}))
         }
@@ -47,9 +47,9 @@ impl Interval {
 
     fn lt(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
         if self.l >= lim { //all of the range is above lim, so none goes left
-            (None, Some(self))
+            (None, Some(*self))
         } else if self.h < lim { //all of the range is below lim, so none goes right
-            (Some(self),None)
+            (Some(*self),None)
         } else {
             (Some(Interval{l:self.l, h:lim-1}), Some(Interval{l:lim,h:self.h}))
         }
@@ -120,7 +120,7 @@ enum Node {
 
 
 impl Node {
-    fn process(&mut self, queue: &mut Vec<XMASRange>, acceptlist: &mut HashSet<XMASRange>)  {
+    fn process(&mut self, queue: &mut Vec<Box<Node>>, acceptlist: &mut HashSet<XMASRange>)  {
         match self {
             Node::Accept(s) => acceptlist.insert(s)   ,/*push to Accept list */
             Node::Reject(_) => {},  /* don't do anything */
@@ -232,16 +232,16 @@ fn parse(s: &str) -> Box<Node> {
 
 
 /* process the tree, DFS */
-fn get_ranges(in_node: &mut Node) -> HashSet<XMASRange> {
+fn get_ranges(in_node: &mut Box<Node>) -> HashSet<XMASRange> {
     /* then walk the tree */
     in_node.state = [Interval{l: 1, h: 4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}];
 
     let accepts = HashSet::<XMASRange>::new();
-    let queue = Vec::<XMASRange>::new();
+    let queue = Vec::<Box<Node>>::new();
     queue.push(in_node);
     let mut node_now = queue.pop();
     while let Some(cursor) = node_now {
-        cursor.process(queue, accepts);
+        cursor.process(&mut queue, &mut accepts);
         node_now = queue.pop();
     }
     accepts
