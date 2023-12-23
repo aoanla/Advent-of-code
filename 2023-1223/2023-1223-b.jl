@@ -111,6 +111,23 @@ end
 
 e_node = build_graph!(Nodes, Edges) 
 
+
+function contract_edges!(Edges)
+    #find cases where a node has only two edges (to E1, E2), and replace the node and the edges with single edge E1->E2
+        #!!!! could be problematic if an edge E1-E2 already exists!!!
+    contractable = filter(p->length(p[2])==2, pairs(Edges) )
+    while !isempty(contractable)
+        for (k,v) ∈ contractable
+            new_edges = keys(v)
+            dist = sum(values(v)); #distance is the sum (dist to each from here)
+            #delete old edges 
+            #add new edge
+        end
+        contractable = filter(p->length(p[2])==2, pairs(Edges) )
+        #try again incase now another node is contractable
+    end 
+end
+
 #=
 println("Nodes: $Nodes")
 println("")
