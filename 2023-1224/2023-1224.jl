@@ -74,3 +74,8 @@ println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 # so, after 3 hailstones we already have 0 net unknowns remaining... so we're just solving a relatively small matrix math problem?
 
 #ah, the wrinkle is that this is a non-linear problem (the product of two unknowns - R̲ and tᵢ is present in each)
+
+# equations are of the form
+#
+#  Rₓ tᵢ + Rₒₓ - Vₓᵢ tᵢ - Oₓᵢ = 0  , where x ∈ {x,y,z} and i ∈ {1,2,3} (such that "Oₓ₁" is "A" for hailstone 1) 
+# nonlinear in the leftmost term (unknowns {R}s, {t}s)
