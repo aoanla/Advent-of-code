@@ -190,7 +190,7 @@ function simulated_annealing(xₙ)
     xₙ
 end
 
-println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]))")
+#println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]))")
 
 #or maybe we just need to do more maths
 
@@ -246,3 +246,41 @@ println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]
 
 #but first we need to find two parallel lines... 
 #... reader, we do not have any parallel lines
+
+#... but can we do this in the different axes separately? I keep treating this as a whole vector problem, but if we constrain it to hailstones with identical velocities
+
+# Rₓₒ = Hₓ₀ + (Hₓ-Rₓ)tₜ  =  Hₓ₀′ + (Hₓ-Rₓ)tₛ
+# and so on for all x,y,z 
+
+# So, if there's two hailstones with just x-components of their velocities that are the same, it's true that
+
+# Hₓ₀ + (Hₓ-Rₓ)tₜ  =  Hₓ₀′ + (Hₓ-Rₓ)tₛ
+# but these are *always the same distance apart* in x - doesn't this provide a constraint in Rₓ ? 
+#subtract the two lines:
+
+# (Hₓ₀-Hₓ₀′) = (Hₓ-Rₓ)(tₛ-tₜ)
+# 
+# if δt is an integer... this implies that (Hₓ-Rₓ) divides (Hₓ₀-Hₓ₀′) perfectly - aha, there's our modulo :D 
+
+# so find candidate Rₓ such that (for two things with the same x speed) (Hₓ₀-Hₓ₀′) % (Hₓ-Rₓ) = 0
+# there's not too many possible Rₓ to check [since as observed, the velocities seem to be +/-1000]
+
+function parallel(hails)
+    for i in eachindex(hails), j in eachindex(hails)[i+1:end]
+        #ratios 
+        if hails[i].raw[4] == hails[j].raw[4]
+            println("parallel match X: $(hails[i]), $(hails[j])")
+        end
+        if hails[i].raw[5] == hails[j].raw[5]
+            println("parallel match Y: $(hails[i]), $(hails[j])")
+        end
+        if hails[i].raw[5] == hails[j].raw[5]
+            println("parallel match Z: $(hails[i]), $(hails[j])")
+        end
+    end
+    println("End of test")
+end 
+
+parallel(hails)
+
+#we also don't have any x,y,z shared velocities :(
