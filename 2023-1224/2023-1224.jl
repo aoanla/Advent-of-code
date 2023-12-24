@@ -90,21 +90,30 @@ println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 
 
 
-function optimiand(t,Rₒ,R)
+function optimand(xₙ)
+    t = xₙ[1:3]
+    Rₒ = xₙ[4:6]
+    R = xₙ[7:9]
     loss = 0
     for (tᵢ, hailsᵢ) in zip(t,hails)
-        xx = R[1]*tᵢ + Rₒ[1] - hailsᵢ.raw[4]*tᵢ - hailsᵢ[1]
-        yy = R[2]*tᵢ + Rₒ[2] - hailsᵢ.raw[5]*tᵢ - hailsᵢ[2]
-        zz = R[3]*tᵢ + Rₒ[3] - hailsᵢ.raw[6]*tᵢ - hailsᵢ[3]
+        xx = R[1]*tᵢ + Rₒ[1] - hailsᵢ.raw[4]*tᵢ - hailsᵢ.raw[1]
+        yy = R[2]*tᵢ + Rₒ[2] - hailsᵢ.raw[5]*tᵢ - hailsᵢ.raw[2]
+        zz = R[3]*tᵢ + Rₒ[3] - hailsᵢ.raw[6]*tᵢ - hailsᵢ.raw[3]
         loss += xx*xx + yy*yy + zz*zz
     end
     loss
 end 
 
-function NRS()
-    Δ = xₙ - optimand(xₙ) / gradient(optimand, xₙ) #urg division by vectors
-
-    Δ = xₙ - (gradient(optimand, xₙ))⁻¹ .optimand(xₙ)
-    #v  #s        #v                       #s
+function NRS(x₀)
+    xₙ = deepcopy(x₀)
+    Δ = ones(Rational{Int128}, 9)
+    while sum(abs.(Δ)) > 1  
+        Δ = round.(optimand(xₙ) / gradient(optimand, xₙ)[1]) #urg division by vectors
+        xₙ .-= Δ
+    end
+                #Δ = xₙ - (gradient(optimand, xₙ))⁻¹ .optimand(xₙ)
+                #v  #s        #v                       #s
+    xₙ
 end
     
+println("$(NRS(Rational{Int128}[30,30,30,1000000, 1000000, 1000000, 200,200,200]))")
