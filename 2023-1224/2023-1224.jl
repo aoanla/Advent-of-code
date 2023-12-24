@@ -103,5 +103,8 @@ end
 
 function NRS()
     Δ = xₙ - optimand(xₙ) / gradient(optimand, xₙ) #urg division by vectors
+
+    Δ = xₙ - (gradient(optimand, xₙ))⁻¹ .optimand(xₙ)
+    #v  #s        #v                       #s
 end
     
