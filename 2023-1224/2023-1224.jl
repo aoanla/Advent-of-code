@@ -216,3 +216,7 @@ println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]
 # R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ = H̲₀′′ + (H̲′′-R̲)tᵣ  ... and so on
 
 #if we assume all these ts are integral what does that get us?
+#there's some integral R̲ and sets of integral κ such that... all of our lines intersect if we offset them appropriately.
+
+#is this a *modulo arithmetic* thing? It's super suspicious that this is all integer multiples of R̲ 
+# *can* we do modulo arithmetic line intersections? 
