@@ -287,3 +287,14 @@ end
 
 #I think we're going to have to go back to our original idea back up the page and search for suitable integer Rs that make lines intersect. But it's late now and I don't have
 #time to write the code.
+
+#...oh, my, god, after just sitting in the bath for a bit, I actually tried visualising the problem.
+#
+#
+# If you imagine the rock ray's viewpoint, looking in the direction it is flying, *all of the trajectories of the hailstones intersect at the same point* 
+# (because from it's point of view, that point is the "origin" projected on the plane perpendicular to it, and it doesn't move in that plane, so anything it hits must alsi
+# be at that point in the same projected plane)
+# 
+# So, the *direction* of R is the unique direction that, when we rotate space so that z points in that direction, all hailstone trajectories intersect at the same x,y coordinates
+# (and the times they intersect are the times that R hits them, so we can solve for it's actual velocity and then its position by back calculating.)
+# as this is a *direction*, it has only 2 degrees of freedom, which means the search space is easier too.
