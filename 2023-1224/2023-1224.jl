@@ -79,3 +79,5 @@ println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 #
 #  Rₓ tᵢ + Rₒₓ - Vₓᵢ tᵢ - Oₓᵢ = 0  , where x ∈ {x,y,z} and i ∈ {1,2,3} (such that "Oₓ₁" is "A" for hailstone 1) 
 # nonlinear in the leftmost term (unknowns {R}s, {t}s)
+
+# I guess we could use multi-dimensional Newton-Raphson-Seki for this? Numerical stability seems concerning though.
