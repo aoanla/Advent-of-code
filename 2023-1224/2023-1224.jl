@@ -17,7 +17,6 @@
 # x = A + Dt -> t = (x-A)/D = (1/D)x - A/D = γx - δ
 
 #pt 2
-using Zygote
 
 struct Hail
     α::Rational
@@ -88,7 +87,8 @@ println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 #(I assume what Eric actually wants us to do is to solve the whole system in an "AI" like way, with backprop and ADAM or something
 # but let's see if good-old differentiable programming can do this for us here in Julia)
 
-
+#Ah, no, I forgot: all our values are *integers*, so this is an *integer programming* problem. 
+# There's lots of approaches to these - simulated annealing, say - or various parallel solution search things like GAs
 
 function optimand(xₙ)
     t = xₙ[1:3]
@@ -99,21 +99,120 @@ function optimand(xₙ)
         xx = R[1]*tᵢ + Rₒ[1] - hailsᵢ.raw[4]*tᵢ - hailsᵢ.raw[1]
         yy = R[2]*tᵢ + Rₒ[2] - hailsᵢ.raw[5]*tᵢ - hailsᵢ.raw[2]
         zz = R[3]*tᵢ + Rₒ[3] - hailsᵢ.raw[6]*tᵢ - hailsᵢ.raw[3]
-        loss += xx*xx + yy*yy + zz*zz
+        loss += abs(xx) + abs(yy) + abs(zz)
     end
     loss
 end 
 
-function NRS(x₀)
-    xₙ = deepcopy(x₀)
-    Δ = ones(Rational{Int128}, 9)
-    while sum(abs.(Δ)) > 1  
-        Δ = round.(optimand(xₙ) / gradient(optimand, xₙ)[1]) #urg division by vectors
-        xₙ .-= Δ
+function d_optimand(xₙ)
+    t = xₙ[1:3]
+    Rₒ = xₙ[4:6]
+    R = xₙ[7:9]
+    loss = 0
+    dt = [sum(R), sum(R), sum(R)]
+    for i in eachindex(dt)
+        dt[i] -= hails[i].raw[4] 
     end
+    dRₒ = Int128[3,3,3] #always the same, it's a constant term in the loss 
+    dR = Int128[sum(t), sum(t), sum(t)] #always dependant on the relevant tᵢ                    ]
+    vcat(dt, dRₒ, dR)
+end 
+
+#function NRS(x₀)
+#    xₙ = deepcopy(x₀)
+#    Δ = ones(Rational{Int128}, 9)
+#    while sum(abs.(Δ)) > 1  
+#        Δ = round.(optimand(xₙ) / gradient(optimand, xₙ)[1]) #urg division by vectors
+#        xₙ .-= Δ
+#    end
                 #Δ = xₙ - (gradient(optimand, xₙ))⁻¹ .optimand(xₙ)
                 #v  #s        #v                       #s
+#    xₙ
+#end
+    
+#println("$(NRS(Rational{Int128}[30,30,30,1000000, 1000000, 1000000, 200,200,200]))")
+
+function mutate!(xₙ)
+    s = optimand(xₙ)
+    ds = d_optimand(xₙ)
+    println("Sumds = $(sum(ds))")
+    option = ceil(rand()*sum(ds))
+    println("Sumds = $(sum(ds))")
+    select = 1
+    for i in eachindex(ds)
+        ds[i] > option && break
+        select += 1
+        option -= ds[i]
+    end
+    xₙ[select] -= round((s ÷ ds[select]) * rand())
+end
+
+
+function simulated_annealing(xₙ)
+
+    loss = optimand(xₙ)
+    count = 0 
+    c_max = 1000000   
+    while count < c_max
+        #temp
+        T = 1 - ((count+1)/c_max)
+        xₘ = deepcopy(xₙ)
+        mutate!(xₘ)
+        new_loss = optimand(xₘ)
+        if new_loss < loss
+            xₙ = xₘ
+            loss = new_loss
+        else #conditional acceptance
+            p = exp((new_loss-loss)/T )
+            if  rand() < p
+                xₙ = xₘ
+                loss = new_loss
+            end
+        end
+        count+=1
+    end
     xₙ
 end
-    
-println("$(NRS(Rational{Int128}[30,30,30,1000000, 1000000, 1000000, 200,200,200]))")
+
+println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]))")
+
+#or maybe we just need to do more maths
+
+# the fact that all our hailstones are hit by our rock means that they pass through its line 
+
+# R̲ₒ + R̲tᵢ = H̲₀ + H̲tₜ   =>  R̲ₒ = H̲₀ + (H̲-R̲)tₜ  for some tₜ (different for each hailstone)
+
+# for two hailstones 
+# this means that there are some tₜ tₛ respectively such that
+
+# R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ
+# 
+# these are arbitrary hailstones, so we can assume that they're skew [we could test for this before doing the following] and their lines don't normally intersect
+
+# but what the above says is that there's some linear offset we could apply that would make their *lines* intersect at a point, albeit at different times 
+# (this feels like the answer Eric wants us to go for , since he had us intersecting lines with no time in pt 1 )
+# (that offset is effectively R̲(tₜ-tₛ), right?  - rewrite thoses as
+
+# H̲₀ -R̲tₜ + H̲tₜ  =  H̲₀′ -R̲tₛ + H̲′tₛ
+# H̲₀ -R̲tₜ+R̲tₛ + H̲tₜ  =  H̲₀′ + H̲′tₛ
+# H̲₀ -R̲(tₜ-tₛ) + H̲tₜ  =  H̲₀′ + H̲′tₛ   ... let (-R̲(tₜ-tₛ)) => κ̲
+# H̲₀+κ̲ + H̲tₜ  =  H̲₀′ + H̲′tₛ 
+
+#so this is now a problem of finding an (integer) κ̲ for pairs of lines that are skew, such that they aren't skew any more
+
+# obviously there's an infinite number of such κ, depending on what point we want them to intersect at . 
+
+# the condition for two lines to intersect in (more than 2d) is
+# (H̲×H̲′)⋅(H̲ₒ-H̲ₒ′+κ̲) = 0
+
+# and our κ must be a modification to the difference in the dot product to make this true, and it must have all integer components (although those components may be large)
+# However - the velocities are generally quite constrained compared to the positions in this problem (they've generally been -1000...1000 or better)
+# even better, if tₜ and tₛ are both integer as well, all three components of κ̲ will be a multiple of (tₜ-tₛ) which is quite unusual!
+
+#That's still a lot of searching...
+
+#...is there anything we can do with the fact that we don't just have pairs that do this - *all* of our hailstones can be made to = R̲ₒ with a presumably integer offset of R̲ 
+#
+# R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ = H̲₀′′ + (H̲′′-R̲)tᵣ  ... and so on
+
+#if we assume all these ts are integral what does that get us?
