@@ -64,3 +64,11 @@ function intersect_range(hails, minr, maxr)
 end
 
 println("$(intersect_range(hails,  200000000000000, 400000000000000))")
+
+#part 2 - this seems *weirdly* over specified.
+
+# we have to find  R̲₀ + R̲t such that we intersect all the hailstones.
+# but! 
+# R̲₀ has 3 unknowns. R̲ has 3 unknowns. 6 unknowns total
+# each hailstone provides 3 simultaneous equations, and adds 1 unknown (time of intersection tᵢ)
+# so, after 3 hailstones we already have 0 net unknowns remaining... so we're just solving a relatively small matrix math problem?
