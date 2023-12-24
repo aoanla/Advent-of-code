@@ -16,6 +16,9 @@
 #to check time we can just check time for x 
 # x = A + Dt -> t = (x-A)/D = (1/D)x - A/D = γx - δ
 
+#pt 2
+using Zygote
+
 struct Hail
     α::Rational
     β::Rational
@@ -80,4 +83,25 @@ println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 #  Rₓ tᵢ + Rₒₓ - Vₓᵢ tᵢ - Oₓᵢ = 0  , where x ∈ {x,y,z} and i ∈ {1,2,3} (such that "Oₓ₁" is "A" for hailstone 1) 
 # nonlinear in the leftmost term (unknowns {R}s, {t}s)
 
-# I guess we could use multi-dimensional Newton-Raphson-Seki for this? Numerical stability seems concerning though.
+# I guess we could use multi-dimensional Newton-Raphson-Seki for this? Numerical stability seems concerning though. 
+
+#(I assume what Eric actually wants us to do is to solve the whole system in an "AI" like way, with backprop and ADAM or something
+# but let's see if good-old differentiable programming can do this for us here in Julia)
+
+
+
+function optimiand(t,Rₒ,R)
+    loss = 0
+    for (tᵢ, hailsᵢ) in zip(t,hails)
+        xx = R[1]*tᵢ + Rₒ[1] - hailsᵢ.raw[4]*tᵢ - hailsᵢ[1]
+        yy = R[2]*tᵢ + Rₒ[2] - hailsᵢ.raw[5]*tᵢ - hailsᵢ[2]
+        zz = R[3]*tᵢ + Rₒ[3] - hailsᵢ.raw[6]*tᵢ - hailsᵢ[3]
+        loss += xx*xx + yy*yy + zz*zz
+    end
+    loss
+end 
+
+function NRS()
+    Δ = xₙ - optimand(xₙ) / gradient(optimand, xₙ) #urg division by vectors
+end
+    
