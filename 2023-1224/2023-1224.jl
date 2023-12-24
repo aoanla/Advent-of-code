@@ -67,6 +67,22 @@ end
 
 println("$(intersect_range(hails,  200000000000000, 400000000000000))")
 
+function parallel(hails)
+    for i in eachindex(hails), j in eachindex(hails)[i+1:end]
+        #ratios 
+        x = hails[i].raw[4] // hails[j].raw[4]
+        y = hails[i].raw[5] // hails[j].raw[5]
+        z = hails[i].raw[6] // hails[j].raw[6]
+        if x == y && y == z
+            println("parallel match: $(hails[i]), $(hails[j])")
+        end
+    end
+    println("End of test")
+end 
+
+parallel(hails)
+
+exit()
 #part 2 - this seems *weirdly* over specified.
 
 # we have to find  R̲₀ + R̲t such that we intersect all the hailstones.
@@ -220,3 +236,13 @@ println("$(simulated_annealing(Int128[30,30,30,100000,1000000,10000,100,-100,40]
 
 #is this a *modulo arithmetic* thing? It's super suspicious that this is all integer multiples of R̲ 
 # *can* we do modulo arithmetic line intersections? 
+# that's not going to work if H != H′ right? *do* we have any parallel lines? 
+
+# if we did then 
+# R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (αH̲-R̲)tₛ  
+# (assuming parallel and not the same speed)
+# ... but if they're *parallel* then the (const) distance between the lines is always a multiple of R, right? (because here R(tₜ-tₛ) *is* the translation vector between them)
+# and since R is integer, and the ⧋t is also an integer (we assume...)
+
+#but first we need to find two parallel lines... 
+#... reader, we do not have any parallel lines
