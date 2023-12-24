@@ -281,6 +281,9 @@ function parallel(hails)
     println("End of test")
 end 
 
-parallel(hails)
+#parallel(hails)
 
 #we also don't have any x,y,z shared velocities :(
+
+#I think we're going to have to go back to our original idea back up the page and search for suitable integer Rs that make lines intersect. But it's late now and I don't have
+#time to write the code.
