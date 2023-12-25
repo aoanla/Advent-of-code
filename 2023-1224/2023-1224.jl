@@ -331,7 +331,7 @@ end
 #we need to *undo* this afterward to get back into the "normal" coordinate space!
 
 for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
-    rx == 0 && ry == 0 && continue #can't be parallel with z if we're doing this! 
+    #rx == 0 && ry == 0 && continue #can't be parallel with z if we're doing this! 
 
     #n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
     #cθ = n[3] #easy dot product
@@ -346,11 +346,11 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
     # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × n )
 
     #n × z
-    perpx = Float64[ry, -rx, 0]#[n[2], -n[1], 0] 
-    perpx ./= sqrt(sum(perpx.^2))
+    #perpx = Float64[ry, -rx, 0]#[n[2], -n[1], 0] 
+    #perpx ./= sqrt(sum(perpx.^2))
     #n x z x n
-    perpy = Float64[-rx*rz,  -ry*rz, ry*ry+rx*rx] 
-    perpy ./= sqrt(sum(perpy.^2))
+    #perpy = Float64[-rx*rz,  -ry*rz, ry*ry+rx*rx] 
+    #perpy ./= sqrt(sum(perpy.^2))
     #I don't think we actually need to normalise and this makes it slow
 
     #secondly, though, we don't even need to project here, because I was missing the obvious thing staring me in the face from earlier:
@@ -362,15 +362,18 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
 
     #dot products for projection
     th = []
+    axispar = false
     for e in three_hails
-        A = sum(e.raw[1:3] .* perpx)
-        B = sum(e.raw[1:3] .* perpy)
-        C = 0 #irrelevant
-        D = sum(e.raw[4:6] .* perpx)
-        E = sum(e.raw[4:6] .* perpy)
-        F = 0 #irrelevant
-        push!(th, Hail(A-(D*B/E), D/E, 1.0/D, A/D, [0,0,0,0,0,0]) )
+        D = e.raw[4] - rx
+        E = e.raw[5] - ry 
+        F = e.raw[6] - rz
+        if E == 0 || D == 0
+            axispar = true
+            break 
+        end
+        push!(th, Hail(e.raw[1]-(D*e.raw[2]//E), D//E, 1//D, e.raw[1]//D, [e.raw[1],e.raw[2],e.raw[3],D,E,F]) )
     end
+    axispar && continue 
     
     #(we do need to ensure our resulting Vs arent parallel though, because we want them to intersect at a *single* point, Ho, not everywhere)
     #function intersect(h1::Hail,h2::Hail)
@@ -384,7 +387,7 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
     h1h3 = intersect(th[1], th[3])
     (h1h2 == nothing || h1h3 == nothing) && continue #parallel rays :(
     #println("Error $(abs(h1h2[1] - h1h3[1]))   $(abs(h1h2[2] - h1h3[2]))")
-    (abs(h1h2[1] - h1h3[1]) > 0.1 || abs(h1h2[2] - h1h3[2]) > 0.1 )  && continue #not our match, as these rays are not all mutually intersecting at same point
+    ( h1h2[1] != h1h3[1] || h1h2[2] != h1h3[2] )  && continue #not our match, as these rays are not all mutually intersecting at same point
     x,y = h1h2
     #println("Intersection @ $h1h2  $h1h3  with $th")
     #ans = check_2dintersections(th) #if they all intersect at (close to) same point, hurrah!
@@ -393,10 +396,6 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
     
     t1 = th[1].γ*x - th[1].δ
     t2 = th[2].γ*x - th[2].δ
-    if isnan(t1)
-    #    println("NAN: $rx $ry $rz   $perpx $perpy $th")
-        continue
-    end
     (t1 < 0 || t2 < 0) && continue #in the past collision 
     println("Time is t1 @ $t1,, t2 @ $t2")
     #once we have the times these also give us when things happen in the *untransformed* frame so:
