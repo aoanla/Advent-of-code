@@ -298,3 +298,58 @@ end
 # So, the *direction* of R is the unique direction that, when we rotate space so that z points in that direction, all hailstone trajectories intersect at the same x,y coordinates
 # (and the times they intersect are the times that R hits them, so we can solve for it's actual velocity and then its position by back calculating.)
 # as this is a *direction*, it has only 2 degrees of freedom, which means the search space is easier too.
+
+#and this must be what Eric intended, given part 1...
+
+# if v is our vector we want to put along z, and v is normalised then we calculate the rotation matrix by:
+
+# v.z = cos angle between v and z right now  = cθ
+# v×z = the vector we need to rotate around (perp to v and z) to get that rotation = ux uy uz 
+
+#rotation about an arbitrary axis is :
+
+#    Γ  cθ+ux^2(1-cθ)           uxuy(1-cθ)-uzsθ     uxuz(1-cθ)+uysθ
+#R = |  uyux(1-cθ) + uzsθ       cθ + uy^2(1-cθ)
+#    L  uzux(1-cθ) - uysθ    ....
+#
+# doing this with matrix maths since this is Julia  R = cθ I̲ + sθ [u]ₓ + (1-cθ) u⨷u   (where ux is the cross product matrix and ⊗ is outer product) 
+#
+# I guess if we do this in float64 we might be okay if we just get things that are close to ints at the end?
+
+
+
+
+#take three hailstones, and make them more tractable by transforming them so that one of them has its start point at the origin
+# (hopefully this makes *all* of them smaller and less awful)
+
+three_hails = hails[1:3]
+for e in three_hails
+    e.raw[1] -= hails[1].raw[1]
+    e.raw[2] -= hails[1].raw[2]
+    e.raw[3] -= hails[1].raw[3]
+end
+#we need to *undo* this afterward to get back into the "normal" coordinate space!
+
+for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600 
+    n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
+    cθ = n[3] #easy dot product
+    sθ = sqrt(1-cθ^2)  #less pleasant  
+    u = [n[2], -n[1], 0] #also easy cross product
+    rotation = [  [ cθ+n[2]*n[2]*(1-cθ)   n[2]n[1](cθ-1)  -n[1]sθ ] ; [n[2]n[1](cθ-1)  cθ+n[1]n[1](1-cθ) -n[2]sθ] ; [n[1]sθ  n[2]sθ   cθ] ]   #check orientation
+    
+    rotated_hails = rotate(rotation, three_hails) #need a better representation for them so I can easily rotate them
+    ans = check_2dintersections(three_hails) #if they all intersect at (close to) same point, hurrah!
+    ans == nothing && continue #there was no triple insection
+    x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
+
+    vel = dist(three_hails[1]z - three_hails[2]z) / (t2-t1) 
+    
+    #in this coordinate system, vel is purely in the z direction!
+    z = three_hails[1] @ t1 z - vel*t1 #moving back to where rock's z must be 
+
+    true_start = unrotate([x,y,z]) + (hails[1]) #remember to undisplace by hails[1]'s coords to undo the first transform outside the loop
+
+    int_start = round.(true_start)
+
+    sum(int_start)
+end
