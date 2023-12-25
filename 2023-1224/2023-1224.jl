@@ -19,19 +19,19 @@
 #pt 2
 
 struct Hail
-    α::Rational
-    β::Rational
-    γ::Rational 
-    δ::Rational
-    raw::Tuple{Int, Int, Int, Int, Int, Int}
+    α::Union{Rational,Float64}
+    β::Union{Rational,Float64}
+    γ::Union{Rational,Float64} 
+    δ::Union{Rational,Float64}
+    raw::Vector{Int128}
 end 
 
-hails = open("input") do f
+hails = open("input2") do f
     hails = Hail[]
     re = r"(-?[0-9]+),\s+(-?[0-9]+),\s+(-?[0-9]+)\s+@\s+(-?[0-9]+),\s+(-?[0-9]+),\s+(-?[0-9]+)"
     for line in readlines(f)
         A,B,C,D,E,F = parse.(Int128, match(re, line).captures) #wow we need 128 bit integers!
-        push!(hails, Hail(A-(D*B//E), D//E, 1//D, A//D, (A,B,C,D,E,F)) )
+        push!(hails, Hail(A-(D*B//E), D//E, 1//D, A//D, [A,B,C,D,E,F]) )
     end 
     hails
 end
@@ -39,7 +39,7 @@ end
 function intersect(h1::Hail,h2::Hail)
     h1.β == h2.β && return nothing #no intersection if parallel - safe as rationals
 
-    y = (h1.α - h2.α) // (h2.β - h1.β)
+    y =  typeof(h1.α) == Rational ? (h1.α - h2.α) // (h2.β - h1.β) : (h1.α - h2.α) / (h2.β - h1.β) 
     x = h1.α + h1.β*y
     (x,y)
 end
@@ -58,14 +58,14 @@ function intersect_range(hails, minr, maxr)
             x,y = res
             (hails[i].γ*x - hails[i].δ <= 0 || hails[j].γ*x - hails[j].δ <= 0 ) && continue #past for one or both 
             (x < minr || x > maxr || y < minr || y > maxr) && continue 
-            #println("Intersection of $(hails[i]) and $(hails[j]) @ $x,$y ")
+            println("Intersection of $(hails[i]) and $(hails[j]) @ $x,$y ")
             #also need to check if t is negative!
             counter += 1
     end
     counter 
 end
 
-println("$(intersect_range(hails,  200000000000000, 400000000000000))")
+println("$(intersect_range(hails,  7, 27))")
 
 function parallel(hails)
     for i in eachindex(hails), j in eachindex(hails)[i+1:end]
@@ -80,9 +80,8 @@ function parallel(hails)
     println("End of test")
 end 
 
-parallel(hails)
+#parallel(hails)
 
-exit()
 #part 2 - this seems *weirdly* over specified.
 
 # we have to find  R̲₀ + R̲t such that we intersect all the hailstones.
@@ -322,16 +321,20 @@ end
 #take three hailstones, and make them more tractable by transforming them so that one of them has its start point at the origin
 # (hopefully this makes *all* of them smaller and less awful)
 
-three_hails = hails[1:3]
+three_hails = deepcopy(hails[1:3])
 for e in three_hails
+    println("$e   $(hails[1])")
     e.raw[1] -= hails[1].raw[1]
     e.raw[2] -= hails[1].raw[2]
     e.raw[3] -= hails[1].raw[3]
 end
 #we need to *undo* this afterward to get back into the "normal" coordinate space!
 
-for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600 
-    n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
+for rx ∈ -3:-2, ry ∈ 0:1, rz ∈ 1:2
+    rx == 0 && ry == 0 && continue #can't be parallel with z if we're doing this! 
+    println("****************************************")
+    println("$rx $ry $rz")
+    #n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
     #cθ = n[3] #easy dot product
     #sθ = sqrt(1-cθ^2)  #less pleasant  
     #u = [n[2], -n[1], 0] #also easy cross product
@@ -344,10 +347,10 @@ for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600
     # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × n )
 
     #n × z
-    perpx =  [n[2], -n[1], 0] 
+    perpx = Float64[ry, -rx, 0]#[n[2], -n[1], 0] 
     perpx ./= sqrt(sum(perpx.^2))
     #n x z x n
-    perpy = [-n[2]*n[3],  n[2]*n[3], n[2]*n[2]+n[1]*n[1]] 
+    perpy = Float64[-rx*rz,  -ry*rz, ry*ry+rx*rx] 
     perpy ./= sqrt(sum(perpy.^2))
 
     #secondly, though, we don't even need to project here, because I was missing the obvious thing staring me in the face from earlier:
@@ -360,14 +363,15 @@ for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600
     #dot products for projection
     th = []
     for e in three_hails
-        A = dot(e.raw[1:3], perpx)
-        B = dot(e.raw[1:3], perpy)
-        C = dot(e.raw[1:3], n)
-        D = dot(e.raw[4:6], perpx)
-        E = dot(e.raw[4:6], perpy)
-        F = dot(e.raw[4:6], n)
-        push!(th, Hail(A-(D*B//E), D//E, 1//D, A//D, (A,B,C,D,E,F)) )
+        A = sum(e.raw[1:3] .* perpx)
+        B = sum(e.raw[1:3] .* perpy)
+        C = 0 #irrelevant
+        D = sum(e.raw[4:6] .* perpx)
+        E = sum(e.raw[4:6] .* perpy)
+        F = 0 #irrelevant
+        push!(th, Hail(A-(D*B/E), D/E, 1.0/D, A/D, [0,0,0,0,0,0]) )
     end
+    
     #(we do need to ensure our resulting Vs arent parallel though, because we want them to intersect at a *single* point, Ho, not everywhere)
     #function intersect(h1::Hail,h2::Hail)
     #    h1.β == h2.β && return nothing #no intersection if parallel - safe as rationals
@@ -378,21 +382,35 @@ for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600
     #end
     h1h2 = intersect(th[1], th[2])
     h1h3 = intersect(th[1], th[3])
-    (h1h2[1] != h1h3[1] || h1h2[2] != h1h3[2]) && continue #not our match, as these rays are not all mutually intersecting at same point
+    (h1h2 == nothing || h1h3 == nothing) && continue #parallel rays :(
+    (abs(h1h2[1] - h1h3[1]) > 0.01 || abs(h1h2[2] - h1h3[2]) > 0.01 )  && continue #not our match, as these rays are not all mutually intersecting at same point
     x,y = h1h2
+    println("Intersection @ $h1h2  $h1h3  with $th")
     #ans = check_2dintersections(th) #if they all intersect at (close to) same point, hurrah!
     #ans == nothing && continue #there was no triple insection
     #x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
+    
     t1 = th[1].γ*x - th[1].δ
     t2 = th[2].γ*x - th[2].δ
-    vel = (th[1].raw[3] - th[2].raw[3]) / (t1-t2) 
-    
-    #in this coordinate system, vel is purely in the z direction!
-    z = th[1].raw[3]+ t1*th[1].raw[6] - vel*t1 #moving back to where rock's z must be 
+    #if isnan(t1)
+    #    println("NAN: $rx $ry $rz   $perpx $perpy $th")
+    #    continue
+    #end
+    (t1 < 0 || t2 < 0) && continue #in the past collision 
+    println("Time is t1 @ $t1,, t2 @ $t2")
+    #once we have the times these also give us when things happen in the *untransformed* frame so:
+    #simplifiying because we transformed such that three_hails[1] starts at origin
 
-    true_start = unproject([x,y,z]) .+ (hails[1].raw[1:3]) #remember to undisplace by hails[1]'s coords to undo the first transform outside the loop
+    vel = (three_hails[2].raw[1:3] .+ three_hails[2].raw[4:6].*t2 .- three_hails[1].raw[4:6].*t1) ./ (t2-t1) 
+    
+    #so, tracing back from origin of three_hails[1] by t1 seconds
+    println("Transforming from $(hails[1].raw[1:3])")
+
+    ##################RELATIVE VELOCITY!!!!! 
+    true_start = hails[1].raw[1:3] .+ (three_hails[1].raw[4:6] .- vel).*t1 #remember to undisplace by hails[1]'s coords to undo the first transform outside the loop
 
     int_start = round.(true_start)
-
-    sum(int_start)
+    println("Found at $int_start velocity: $vel")
+    println("$(sum(int_start))")
+    #break
 end
