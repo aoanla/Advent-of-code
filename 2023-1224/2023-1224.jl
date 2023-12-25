@@ -331,7 +331,7 @@ end
 #we need to *undo* this afterward to get back into the "normal" coordinate space!
 
 for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600 
-    #n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
+    n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
     #cθ = n[3] #easy dot product
     #sθ = sqrt(1-cθ^2)  #less pleasant  
     #u = [n[2], -n[1], 0] #also easy cross product
@@ -341,7 +341,14 @@ for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600
 
     ## sigh, I was obviously v tired last night because:
     # firstly: you don't need a rotation matrix to get the perpendicular components to n, if n normalised.
-    # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × x )
+    # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × n )
+
+    #n × z
+    perpx =  [n[2], -n[1], 0] 
+    perpx ./= sqrt(sum(perpx.^2))
+    #n x z x n
+    perpy = [-n[2]*n[3],  n[2]*n[3], n[2]*n[2]+n[1]*n[1]] 
+    perpy ./= sqrt(sum(perpy.^2))
 
     #secondly, though, we don't even need to project here, because I was missing the obvious thing staring me in the face from earlier:
     #### # R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ  ###
@@ -349,19 +356,41 @@ for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600
     # individual hailstones don't enter that point on their trajectories at the same times - but we don't care about the ts really)    
 
     #so, rather than projecting, we can just calculate V for our hailstones by subtracting H and then go from there 
-    
+
+    #dot products for projection
+    th = []
+    for e in three_hails
+        A = dot(e.raw[1:3], perpx)
+        B = dot(e.raw[1:3], perpy)
+        C = dot(e.raw[1:3], n)
+        D = dot(e.raw[4:6], perpx)
+        E = dot(e.raw[4:6], perpy)
+        F = dot(e.raw[4:6], n)
+        push!(th, Hail(A-(D*B//E), D//E, 1//D, A//D, (A,B,C,D,E,F)) )
+    end
     #(we do need to ensure our resulting Vs arent parallel though, because we want them to intersect at a *single* point, Ho, not everywhere)
-
-    ans = check_2dintersections(three_hails) #if they all intersect at (close to) same point, hurrah!
-    ans == nothing && continue #there was no triple insection
-    x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
-
-    vel = dist(three_hails[1]z - three_hails[2]z) / (t2-t1) 
+    #function intersect(h1::Hail,h2::Hail)
+    #    h1.β == h2.β && return nothing #no intersection if parallel - safe as rationals
+    # 
+    #    y = (h1.α - h2.α) // (h2.β - h1.β)
+    #    x = h1.α + h1.β*y
+    #    (x,y)
+    #end
+    h1h2 = intersect(th[1], th[2])
+    h1h3 = intersect(th[1], th[3])
+    (h1h2[1] != h1h3[1] || h1h2[2] != h1h3[2]) && continue #not our match, as these rays are not all mutually intersecting at same point
+    x,y = h1h2
+    #ans = check_2dintersections(th) #if they all intersect at (close to) same point, hurrah!
+    #ans == nothing && continue #there was no triple insection
+    #x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
+    t1 = th[1].γ*x - th[1].δ
+    t2 = th[2].γ*x - th[2].δ
+    vel = (th[1].raw[3] - th[2].raw[3]) / (t1-t2) 
     
     #in this coordinate system, vel is purely in the z direction!
-    z = three_hails[1] @ t1 z - vel*t1 #moving back to where rock's z must be 
+    z = th[1].raw[3]+ t1*th[1].raw[6] - vel*t1 #moving back to where rock's z must be 
 
-    true_start = unrotate([x,y,z]) + (hails[1]) #remember to undisplace by hails[1]'s coords to undo the first transform outside the loop
+    true_start = unproject([x,y,z]) .+ (hails[1].raw[1:3]) #remember to undisplace by hails[1]'s coords to undo the first transform outside the loop
 
     int_start = round.(true_start)
 
