@@ -331,13 +331,27 @@ end
 #we need to *undo* this afterward to get back into the "normal" coordinate space!
 
 for rx ∈ -600:600, ry ∈ -600:600, rz ∈ -600:600 
-    n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
-    cθ = n[3] #easy dot product
-    sθ = sqrt(1-cθ^2)  #less pleasant  
-    u = [n[2], -n[1], 0] #also easy cross product
-    rotation = [  [ cθ+n[2]*n[2]*(1-cθ)   n[2]n[1](cθ-1)  -n[1]sθ ] ; [n[2]n[1](cθ-1)  cθ+n[1]n[1](1-cθ) -n[2]sθ] ; [n[1]sθ  n[2]sθ   cθ] ]   #check orientation
+    #n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
+    #cθ = n[3] #easy dot product
+    #sθ = sqrt(1-cθ^2)  #less pleasant  
+    #u = [n[2], -n[1], 0] #also easy cross product
+    #rotation = [  [ cθ+n[2]*n[2]*(1-cθ)   n[2]n[1](cθ-1)  -n[1]sθ ] ; [n[2]n[1](cθ-1)  cθ+n[1]n[1](1-cθ) -n[2]sθ] ; [n[1]sθ  n[2]sθ   cθ] ]   #check orientation
+    #
+    #rotated_hails = rotate(rotation, three_hails) #need a better representation for them so I can easily rotate them
+
+    ## sigh, I was obviously v tired last night because:
+    # firstly: you don't need a rotation matrix to get the perpendicular components to n, if n normalised.
+    # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × x )
+
+    #secondly, though, we don't even need to project here, because I was missing the obvious thing staring me in the face from earlier:
+    #### # R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ  ###
+    # means that if we subtract R from H, ∀ hailstones, they now have new velocities V such that their *trajectories intersect* at Rₒ (although the
+    # individual hailstones don't enter that point on their trajectories at the same times - but we don't care about the ts really)    
+
+    #so, rather than projecting, we can just calculate V for our hailstones by subtracting H and then go from there 
     
-    rotated_hails = rotate(rotation, three_hails) #need a better representation for them so I can easily rotate them
+    #(we do need to ensure our resulting Vs arent parallel though, because we want them to intersect at a *single* point, Ho, not everywhere)
+
     ans = check_2dintersections(three_hails) #if they all intersect at (close to) same point, hurrah!
     ans == nothing && continue #there was no triple insection
     x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
