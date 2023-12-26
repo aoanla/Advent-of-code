@@ -35,17 +35,19 @@ enum Item {
 
 
 impl Interval {
-    fn gtr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
+    fn gtr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){  //was gtr
         if self.h <= lim { //all of the range is below lim, so none goes left
+
             (None, Some(*self))
         } else if self.l > lim { //all of the range is above lim, so none goes right
             (Some(*self),None)
         } else {
+  
             (Some(Interval{l:lim+1,h:self.h}), Some(Interval{l:self.l,h:lim}))
         }
     }
 
-    fn ltr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
+    fn ltr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){  //was ltr
         if self.l >= lim { //all of the range is above lim, so none goes left
             (None, Some(*self))
         } else if self.h < lim { //all of the range is below lim, so none goes right
@@ -148,9 +150,9 @@ impl Node {
                                 }
                             };
                     if let Some(_) = L { let nl = n.left.clone(); match *(nl) {
-                            Node::Accept(_) => queue.push(Box::new(Node::Accept(R))),
-                            Node::Reject(_) => queue.push(Box::new(Node::Reject(R))),
-                            Node::Split(mut nn) => { nn.state = R; queue.push(Box::new(Node::Split(nn))) }
+                            Node::Accept(_) => queue.push(Box::new(Node::Accept(L))),
+                            Node::Reject(_) => queue.push(Box::new(Node::Reject(L))),
+                            Node::Split(mut nn) => { nn.state = L; queue.push(Box::new(Node::Split(nn))) }
                         }
                     };
                     true
@@ -167,6 +169,8 @@ fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
 }
 
 /* process input into tree */
+
+//probably something wrong here - looks like l/r ordering of nodes gets messed up (or its the queue later on when we process the tree)
 fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
     static re: Lazy<Regex> = Lazy::new(|| Regex::new(r"([xmas])([><])([0-9]+):([^,]+),(.*)$").unwrap() );
     println!("{}", parse_str);
@@ -273,7 +277,9 @@ fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
             let mut queue = Vec::<Box<Node>>::new();
             queue.push(Box::new(Node::Split(n)));
             let mut node_now = queue.pop();
+           
             while let Some(mut cursor) = node_now {
+                println!("Processing: {:?}", cursor);
                 cursor.process(&mut queue, &mut accepts);
                 node_now = queue.pop();
             }
