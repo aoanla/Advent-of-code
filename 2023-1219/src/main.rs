@@ -35,7 +35,7 @@ enum Item {
 
 
 impl Interval {
-    fn gt(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
+    fn gtr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
         if self.h <= lim { //all of the range is below lim, so none goes left
             (None, Some(*self))
         } else if self.l > lim { //all of the range is above lim, so none goes right
@@ -45,7 +45,7 @@ impl Interval {
         }
     }
 
-    fn lt(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
+    fn ltr(&self, lim: i16) -> (Option<Interval>, Option<Interval>){
         if self.l >= lim { //all of the range is above lim, so none goes left
             (None, Some(*self))
         } else if self.h < lim { //all of the range is below lim, so none goes right
@@ -57,7 +57,7 @@ impl Interval {
 }
 
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 struct XMASRange([Interval;4]); //X M A S
 
 /*trait XMAS {
@@ -70,8 +70,7 @@ struct XMASRange([Interval;4]); //X M A S
 impl XMASRange {
     //Selector type for easily expressing "replace just one element of this array in the new array"
     fn sel(&self, index: Item, selector: Item, val: Interval) -> Interval {
-        selector == index && return val ;
-        return self.0[index as usize]
+        if selector == index { val } else { self.0[index as usize] }
     }
 
     fn one_diff_range(&self, selector: Item, val: Interval ) -> Self {
@@ -79,9 +78,9 @@ impl XMASRange {
     }
 
 
-    fn gt(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
+    fn gtr(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
-        match self.0[selector as usize].gt(lim) {
+        match self.0[selector as usize].gtr(lim) {
             (None, None)    => (None, None), //this should never happen!
             (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
             (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
@@ -91,9 +90,9 @@ impl XMASRange {
     }
 
     //and the same for lt here
-    fn lt(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
+    fn ltr(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
-        match self.0[selector as usize].lt(lim) {
+        match self.0[selector as usize].ltr(lim) {
             (None, None)    => (None, None), //this should never happen!
             (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
             (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
@@ -111,27 +110,49 @@ enum Cmp{
     LT, 
 }
 
+//because Rust enum type variants *aren't implemented yet* (come on, everyone, this is a basic feature of having enums as sum types!) I need some silly workaround to
+// make a special "Split" struct just to hold the Split variant of the Node's data
+// *****SIGH*****
+#[derive(Clone)]
+struct Split {
+    state: Option<XMASRange>, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>,
+}
+
+#[derive(Clone)]
 enum Node {
     Accept(Option<XMASRange>),
     Reject(Option<XMASRange>),
     // "state" here is the state of the Range when entering this node so we can do a cheaper DFS
-    Split{state: Option<XMASRange>, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>},
+    Split(Split),
 }
 
 
 impl Node {
-    fn process(&mut self, queue: &mut Vec<&Node>, acceptlist: &mut HashSet<XMASRange>)  {
+    fn process(&mut self, queue: &mut Vec<Box<Node>>, acceptlist: &mut HashSet<XMASRange>)  {
         match self {
-            &mut Node::Accept(s) => if let Some(ss) = s { acceptlist.insert(ss) } else {false}   ,/*push to Accept list */
-            &mut Node::Reject(_) => {false},  /* don't do anything */
-            n @ &mut Node::Split{..}  => {
-                    let (L, R) = match n.cmp {
-                                Cmp::GT =>  n.state.gt(n.val, n.item),
-                                Cmp::LT =>  n.state.lt(n.val, n.item),
-                    };
+            Node::Accept(s) => if let Some(ss) = s { acceptlist.insert(*ss) } else {false}   ,/*push to Accept list */
+            Node::Reject(_) => {false},  /* don't do anything */
+            Node::Split(n)  => {
+                    let (L, R) = match n.state {
+                                    Some(ss)  => match n.cmp {
+                                                Cmp::GT =>  ss.gtr(n.val, n.item),
+                                                Cmp::LT =>  ss.ltr(n.val, n.item),
+                                                }, 
+                                    None =>    (None, None)
+                                };
                     //*if node gets Some(state), bother to push it to the queue - L should be on the *top* of the queue for DFS */
-                    if let Some(right_v) = R {n.right.state = R; queue.push(&*n.right)};
-                    if let Some(left_v) = L {n.left.state = L; queue.push(&*n.left)};
+                    if let Some(_) = R { let nr = n.right.clone(); match *(nr) {
+                                    Node::Accept(_) => queue.push(Box::new(Node::Accept(R))),
+                                    Node::Reject(_) => queue.push(Box::new(Node::Reject(R))),
+                                    Node::Split(mut nn) => { nn.state = R; queue.push(Box::new(Node::Split(nn))) }
+                                }
+                            };
+                    if let Some(_) = L { let nl = n.left.clone(); match *(nl) {
+                            Node::Accept(_) => queue.push(Box::new(Node::Accept(R))),
+                            Node::Reject(_) => queue.push(Box::new(Node::Reject(R))),
+                            Node::Split(mut nn) => { nn.state = R; queue.push(Box::new(Node::Split(nn))) }
+                        }
+                    };
                     true
                 }
             };
@@ -148,17 +169,20 @@ fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
 /* process input into tree */
 fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
     static re: Lazy<Regex> = Lazy::new(|| Regex::new(r"([xmas])([><])([0-9]+):([^,]),(.*)$").unwrap() );
-    let Some(captures) = re.captures(parse_str);
+    println!("{}", parse_str);
+    let captures = re.captures(parse_str).unwrap();
     //begin parsing
     let item = match &captures[1] {
         "x" => Item::X, 
         "m" => Item::M,
         "a" => Item::A,
-        "s" => Item::S, 
+        "s" => Item::S,
+        _ => panic!("Input is not an x,m,a,s") 
     };
     let cmp = match &captures[2] {
         ">" => Cmp::GT, 
         "<" => Cmp::LT,
+        _ => panic!("Input is not an < >") 
     };
     let val = &captures[3].parse::<i16>().unwrap(); //parse digits as i16
     //these need regexes so we can get the whole string & also check "x" versus "xjajaj"
@@ -175,19 +199,20 @@ fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
             b'}' =>  match &captures[5].as_bytes()[0 as usize] {
                 b'A' => Box::new(Node::Accept(None)),
                 b'R' => Box::new(Node::Reject(None)),
+                _ => panic!("one byte terminal sequence is not A or R"), 
             },
             b'<' | b'>' => recursive_anon(&captures[5], &lookup), //make anonymous nodes for intermediate bits from the substring starting with this letter
-            n => recursive_parse(&captures[5].as_bytes()[0:len(&captures[5])-1].into(), &lookup),
+            _ => recursive_parse(&captures[5][..(&captures[5]).len()-1], &lookup),
         };
 
-    Box::new(Node::Split{ 
+    Box::new(Node::Split(Split{
         item: item, 
         cmp: cmp,
         left: left, 
         right: right, 
         val: *val,
         state: None, 
-    })
+    }))
 }
 
 //probably just recursively regex out the null operations first 
@@ -215,11 +240,12 @@ fn parse(s: &str) -> Box<Node> {
         regexes.push( (Regex::new("[:," + &caps[1]).unwrap(), &caps[2])   )
     }
 */
-    let temp_dict = HashMap::<&str, &str>::new();
+    let mut temp_dict = HashMap::<&str, &str>::new();
     //stick our name -> { } stuff into this for easier lookup
     for line in buffer.lines() {
+        if line.as_bytes()[0] == b'{' { break }; //we're in the present defn part of the input which we don't care about
         let kv: Vec<_> = line.split("{").collect() ;
-        temp_dict[kv[0]] = kv[1];
+        temp_dict.insert(kv[0], kv[1]);
     }
 
     //I feel like we should sort this input somehow to make making the tree easier
@@ -239,14 +265,14 @@ fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
 
         Node::Accept(s) => if let Some(ss) = s {HashSet::<XMASRange>::from([ss])} else { HashSet::<XMASRange>::from([])}, 
         Node::Reject(_) => HashSet::<XMASRange>::from([]), 
-        n @ Node::Split{..} => {
+        Node::Split(mut n) => {
             n.state = Some(XMASRange([Interval{l: 1, h: 4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}]));
 
-            let accepts = HashSet::<XMASRange>::new();
-            let queue = Vec::<&Node>::new();
-            queue.push(&n);
-            let node_now = queue.pop();
-            while let Some(cursor) = node_now {
+            let mut accepts = HashSet::<XMASRange>::new();
+            let mut queue = Vec::<Box<Node>>::new();
+            queue.push(Box::new(Node::Split(n)));
+            let mut node_now = queue.pop();
+            while let Some(mut cursor) = node_now {
                 cursor.process(&mut queue, &mut accepts);
                 node_now = queue.pop();
             }
@@ -266,7 +292,7 @@ fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
 
 fn main() {
 
-    let mut tree_node = parse("input_sanitized");
+    let tree_node = parse("input_sanitized");
     let intervals = get_ranges(tree_node);
     let answer = distinct_ranges(&intervals);
     println!("{answer}");

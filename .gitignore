@@ -1,7 +1,8 @@
-**/input
+**/input*
 **/input2
 **/input3
 **/input4
+**/replace
 **/target/
 **/Cargo.lock
 .vscode/

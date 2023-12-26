@@ -16,4 +16,4 @@ while true; do
 	cp input_tmp2 input_tmp
 done
 
-cp input_tmp2 input_sanitized
+grep -v -e "^$" input_tmp2 > input_sanitized
