@@ -36,7 +36,9 @@ edges(a_m) = collect(Iterators.flatten(map(collect(pairs(a_m))) do p
     [(k,vv) for vv ∈ v]
 end ) )
 
-#Karger's algorithm
+#Karger's algorithm (we can do this faster if we don't have to recompute edges(am) each time; let alone using any of the later improvements to 
+# the actual underlying algorithm [like treating it as a permuation of the edge list, and then searching within that permuted list for the
+# sequence where we get to just 2 nodes remaining])
 
 function contract(nodes, a_m)
     ns = deepcopy(nodes)
