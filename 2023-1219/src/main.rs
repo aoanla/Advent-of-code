@@ -23,7 +23,7 @@ struct Interval {
 }
 
 // Stuff we need for tree
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 enum Item {
     X,
     M,
@@ -57,7 +57,7 @@ impl Interval {
 }
 
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 struct XMASRange([Interval;4]); //X M A S
 
 /*trait XMAS {
@@ -104,7 +104,7 @@ impl XMASRange {
 }
 
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 enum Cmp{
     GT,
     LT, 
@@ -113,12 +113,12 @@ enum Cmp{
 //because Rust enum type variants *aren't implemented yet* (come on, everyone, this is a basic feature of having enums as sum types!) I need some silly workaround to
 // make a special "Split" struct just to hold the Split variant of the Node's data
 // *****SIGH*****
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Split {
     state: Option<XMASRange>, item: Item, cmp: Cmp, val: i16, left: Box<Node>, right: Box<Node>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum Node {
     Accept(Option<XMASRange>),
     Reject(Option<XMASRange>),
@@ -285,7 +285,7 @@ fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
 //do Range coalescence stuff for 4d overlapping ranges (bleh)
 fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
     //urgh, of course we don't need to worry about interval intersections - this is a *tree* not a general graph, the intervals can't not be distinct!
-
+    println!("{:?}", xmas_set);
     //and sum to get answer
     xmas_set.iter().map(|item| item.0.iter().map(|interv| interv.h as i64 - interv.l as i64 +1i64).product::<i64>() ).sum() 
 }
@@ -293,7 +293,7 @@ fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
 
 fn main() {
 
-    let tree_node = parse("input");
+    let tree_node = parse("input2");
     let intervals = get_ranges(tree_node);
     let answer = distinct_ranges(&intervals);
     println!("{answer}");
