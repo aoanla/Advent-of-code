@@ -168,7 +168,7 @@ fn recursive_parse(start: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
 
 /* process input into tree */
 fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
-    static re: Lazy<Regex> = Lazy::new(|| Regex::new(r"([xmas])([><])([0-9]+):([^,]),(.*)$").unwrap() );
+    static re: Lazy<Regex> = Lazy::new(|| Regex::new(r"([xmas])([><])([0-9]+):([^,]+),(.*)$").unwrap() );
     println!("{}", parse_str);
     let captures = re.captures(parse_str).unwrap();
     //begin parsing
@@ -243,6 +243,7 @@ fn parse(s: &str) -> Box<Node> {
     let mut temp_dict = HashMap::<&str, &str>::new();
     //stick our name -> { } stuff into this for easier lookup
     for line in buffer.lines() {
+        if line.len() == 0 { break };
         if line.as_bytes()[0] == b'{' { break }; //we're in the present defn part of the input which we don't care about
         let kv: Vec<_> = line.split("{").collect() ;
         temp_dict.insert(kv[0], kv[1]);
@@ -292,7 +293,7 @@ fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
 
 fn main() {
 
-    let tree_node = parse("input_sanitized");
+    let tree_node = parse("input");
     let intervals = get_ranges(tree_node);
     let answer = distinct_ranges(&intervals);
     println!("{answer}");
