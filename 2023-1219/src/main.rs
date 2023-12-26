@@ -16,14 +16,14 @@ use std::fs::read_to_string;
 
 
 //these are *inclusive* Ranges
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 struct Interval {
     l: i16, //low end 
     h: i16, //high end   
 }
 
 // Stuff we need for tree
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 enum Item {
     X,
     M,
@@ -57,31 +57,31 @@ impl Interval {
 }
 
 
-#[derive(Eq, PartialEq)]
-type XMASRange = [Interval;4]; //X M A S
+#[derive(Eq, PartialEq, Hash)]
+struct XMASRange([Interval;4]); //X M A S
 
-trait XMAS {
+/*trait XMAS {
     fn sel(&self, index: Item, selector: Item, val: Interval) -> Interval;
     fn one_diff_range(&self, selector: Item, val: Interval ) -> Self ;
     fn gt(&self, lim: i16, selector: Item ) -> (Option<Self>, Option<Self>) where Self: Sized;
     fn lt(&self, lim: i16, selector: Item ) -> (Option<Self>, Option<Self>) where Self: Sized;
-}
+}*/
 
-impl XMAS for XMASRange {
+impl XMASRange {
     //Selector type for easily expressing "replace just one element of this array in the new array"
     fn sel(&self, index: Item, selector: Item, val: Interval) -> Interval {
         selector == index && return val ;
-        return self[index as usize]
+        return self.0[index as usize]
     }
 
     fn one_diff_range(&self, selector: Item, val: Interval ) -> Self {
-        [self.sel(Item::X, selector, val), self.sel(Item::M, selector, val), self.sel(Item::A, selector, val), self.sel(Item::S, selector, val)]
+        XMASRange([self.sel(Item::X, selector, val), self.sel(Item::M, selector, val), self.sel(Item::A, selector, val), self.sel(Item::S, selector, val)])
     }
 
 
     fn gt(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
-        match self[selector as usize].gt(lim) {
+        match self.0[selector as usize].gt(lim) {
             (None, None)    => (None, None), //this should never happen!
             (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
             (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
@@ -93,7 +93,7 @@ impl XMAS for XMASRange {
     //and the same for lt here
     fn lt(&self, lim: i16, selector: Item) -> (Option<XMASRange>, Option<XMASRange>) {
         //item select logic here  - or could just use map_or(None, XMASRange(.... r.....)) instead
-        match self[selector as usize].lt(lim) {
+        match self.0[selector as usize].lt(lim) {
             (None, None)    => (None, None), //this should never happen!
             (None, Some(r)) => (None, Some(self.one_diff_range(selector, r)) ) , 
             (Some(r), None) => (Some(self.one_diff_range(selector, r)), None ), 
@@ -120,18 +120,19 @@ enum Node {
 
 
 impl Node {
-    fn process(&mut self, queue: &mut Vec<Box<Node>>, acceptlist: &mut HashSet<XMASRange>)  {
+    fn process(&mut self, queue: &mut Vec<&Node>, acceptlist: &mut HashSet<XMASRange>)  {
         match self {
-            Node::Accept(s) => acceptlist.insert(s)   ,/*push to Accept list */
-            Node::Reject(_) => {},  /* don't do anything */
-            n => {
-                    let (L, R) = match self.cmp {
+            &mut Node::Accept(s) => if let Some(ss) = s { acceptlist.insert(ss) } else {false}   ,/*push to Accept list */
+            &mut Node::Reject(_) => {false},  /* don't do anything */
+            n @ &mut Node::Split{..}  => {
+                    let (L, R) = match n.cmp {
                                 Cmp::GT =>  n.state.gt(n.val, n.item),
                                 Cmp::LT =>  n.state.lt(n.val, n.item),
                     };
                     //*if node gets Some(state), bother to push it to the queue - L should be on the *top* of the queue for DFS */
-                    if let Some(right_v) = R {self.right.state = right_v; queue.push(&mut self.right)};
-                    if let Some(left_v) = L {self.left.state = left_v; queue.push(&mut self.left)};
+                    if let Some(right_v) = R {n.right.state = R; queue.push(&*n.right)};
+                    if let Some(left_v) = L {n.left.state = L; queue.push(&*n.left)};
+                    true
                 }
             };
     }
@@ -170,14 +171,14 @@ fn recursive_anon(parse_str: &str, lookup: &HashMap<&str, &str>) -> Box<Node> {
     // either [xmas]<>... (in which case recursively expand)
     // or  [AR]} in which case we're at the end
     // or glarb} in which case we go to node glarb
-    let right = match &captures[5][1 as usize] {
-        '}' =>  match &captures[5][0 as usize] {
-            'A' => Box::new(Node::Accept(None)),
-            'R' => Box::new(Node::Reject(None)),
+    let right = match &captures[5].as_bytes()[1 as usize] {
+            b'}' =>  match &captures[5].as_bytes()[0 as usize] {
+                b'A' => Box::new(Node::Accept(None)),
+                b'R' => Box::new(Node::Reject(None)),
             },
-        '<' | '>' => recursive_anon(&captures[5], &lookup), //make anonymous nodes for intermediate bits from the substring starting with this letter
-        n => recursive_parse(&captures[5][:len(&captures[5])-1], &lookup),
-    };
+            b'<' | b'>' => recursive_anon(&captures[5], &lookup), //make anonymous nodes for intermediate bits from the substring starting with this letter
+            n => recursive_parse(&captures[5].as_bytes()[0:len(&captures[5])-1].into(), &lookup),
+        };
 
     Box::new(Node::Split{ 
         item: item, 
@@ -216,9 +217,9 @@ fn parse(s: &str) -> Box<Node> {
 */
     let temp_dict = HashMap::<&str, &str>::new();
     //stick our name -> { } stuff into this for easier lookup
-    for line in buffer.readlines() {
-        let (key, val) = line.split("{") ;
-        temp_dict[key] = val;
+    for line in buffer.lines() {
+        let kv: Vec<_> = line.split("{").collect() ;
+        temp_dict[kv[0]] = kv[1];
     }
 
     //I feel like we should sort this input somehow to make making the tree easier
@@ -232,19 +233,26 @@ fn parse(s: &str) -> Box<Node> {
 
 
 /* process the tree, DFS */
-fn get_ranges(in_node: &mut Box<Node>) -> HashSet<XMASRange> {
+fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
     /* then walk the tree */
-    in_node.state = [Interval{l: 1, h: 4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}];
+    match *in_node {
 
-    let accepts = HashSet::<XMASRange>::new();
-    let queue = Vec::<Box<Node>>::new();
-    queue.push(in_node);
-    let mut node_now = queue.pop();
-    while let Some(cursor) = node_now {
-        cursor.process(&mut queue, &mut accepts);
-        node_now = queue.pop();
+        Node::Accept(s) => if let Some(ss) = s {HashSet::<XMASRange>::from([ss])} else { HashSet::<XMASRange>::from([])}, 
+        Node::Reject(_) => HashSet::<XMASRange>::from([]), 
+        n @ Node::Split{..} => {
+            n.state = Some(XMASRange([Interval{l: 1, h: 4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}, Interval{l:1, h:4000}]));
+
+            let accepts = HashSet::<XMASRange>::new();
+            let queue = Vec::<&Node>::new();
+            queue.push(&n);
+            let node_now = queue.pop();
+            while let Some(cursor) = node_now {
+                cursor.process(&mut queue, &mut accepts);
+                node_now = queue.pop();
+            }
+            accepts
+        }
     }
-    accepts
 }
 
 //do Range coalescence stuff for 4d overlapping ranges (bleh)
@@ -252,14 +260,14 @@ fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
     //urgh, of course we don't need to worry about interval intersections - this is a *tree* not a general graph, the intervals can't not be distinct!
 
     //and sum to get answer
-    xmas_set.iter().fold(0, |acc, item| acc + item.iter().product::<i64>()) //need to impl the internal product here differently
+    xmas_set.iter().map(|item| item.0.iter().map(|interv| interv.h as i64 - interv.l as i64 +1i64).product::<i64>() ).sum() 
 }
 
 
 fn main() {
 
     let mut tree_node = parse("input_sanitized");
-    let intervals = get_ranges(&mut tree_node);
+    let intervals = get_ranges(tree_node);
     let answer = distinct_ranges(&intervals);
     println!("{answer}");
 }
