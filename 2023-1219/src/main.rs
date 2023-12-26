@@ -279,7 +279,7 @@ fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
             let mut node_now = queue.pop();
            
             while let Some(mut cursor) = node_now {
-                println!("Processing: {:?}", cursor);
+                //println!("Processing: {:?}", cursor);
                 cursor.process(&mut queue, &mut accepts);
                 node_now = queue.pop();
             }
@@ -291,7 +291,7 @@ fn get_ranges(in_node: Box<Node>) -> HashSet<XMASRange> {
 //do Range coalescence stuff for 4d overlapping ranges (bleh)
 fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
     //urgh, of course we don't need to worry about interval intersections - this is a *tree* not a general graph, the intervals can't not be distinct!
-    println!("{:?}", xmas_set);
+    //println!("{:?}", xmas_set);
     //and sum to get answer
     xmas_set.iter().map(|item| item.0.iter().map(|interv| interv.h as i64 - interv.l as i64 +1i64).product::<i64>() ).sum() 
 }
@@ -299,7 +299,7 @@ fn distinct_ranges(xmas_set: &HashSet<XMASRange>) -> i64 {
 
 fn main() {
 
-    let tree_node = parse("input2");
+    let tree_node = parse("input");
     let intervals = get_ranges(tree_node);
     let answer = distinct_ranges(&intervals);
     println!("{answer}");
