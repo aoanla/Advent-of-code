@@ -331,27 +331,7 @@ end
 #we need to *undo* this afterward to get back into the "normal" coordinate space!
 
 for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
-    #rx == 0 && ry == 0 && continue #can't be parallel with z if we're doing this! 
 
-    #n = [rx,ry,rz] / sqrt(rx^2 + ry^2 + rz^2)
-    #cθ = n[3] #easy dot product
-    #sθ = sqrt(1-cθ^2)  #less pleasant  
-    #u = [n[2], -n[1], 0] #also easy cross product
-    #rotation = [  [ cθ+n[2]*n[2]*(1-cθ)   n[2]n[1](cθ-1)  -n[1]sθ ] ; [n[2]n[1](cθ-1)  cθ+n[1]n[1](1-cθ) -n[2]sθ] ; [n[1]sθ  n[2]sθ   cθ] ]   #check orientation
-    #
-    #rotated_hails = rotate(rotation, three_hails) #need a better representation for them so I can easily rotate them
-
-    ## sigh, I was obviously v tired last night because:
-    # firstly: you don't need a rotation matrix to get the perpendicular components to n, if n normalised.
-    # you just project onto two unit vectors perpendicular to n and to each other (so, say, n × x  and n × x × n )
-
-    #n × z
-    #perpx = Float64[ry, -rx, 0]#[n[2], -n[1], 0] 
-    #perpx ./= sqrt(sum(perpx.^2))
-    #n x z x n
-    #perpy = Float64[-rx*rz,  -ry*rz, ry*ry+rx*rx] 
-    #perpy ./= sqrt(sum(perpy.^2))
-    #I don't think we actually need to normalise and this makes it slow
 
     #secondly, though, we don't even need to project here, because I was missing the obvious thing staring me in the face from earlier:
     #### # R̲ₒ = H̲₀ + (H̲-R̲)tₜ  =  H̲₀′ + (H̲′-R̲)tₛ  ###
@@ -389,10 +369,7 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
     #println("Error $(abs(h1h2[1] - h1h3[1]))   $(abs(h1h2[2] - h1h3[2]))")
     ( h1h2[1] != h1h3[1] || h1h2[2] != h1h3[2] )  && continue #not our match, as these rays are not all mutually intersecting at same point
     x,y = h1h2
-    #println("Intersection @ $h1h2  $h1h3  with $th")
-    #ans = check_2dintersections(th) #if they all intersect at (close to) same point, hurrah!
-    #ans == nothing && continue #there was no triple insection
-    #x,y, t1,t2,t3 = ans  #Get times of intersection + place (=x,y coords of start of rock)
+
     
     t1 = th[1].γ*x - th[1].δ
     t2 = th[2].γ*x - th[2].δ
@@ -414,3 +391,7 @@ for rx ∈ -400:400, ry ∈ -400:200, rz ∈ -200:200
     println("$(sum(int_start))")
     break
 end
+
+#of course, if we just doing the "quick check intersection in 2d" thing here, we can easily solve *that* set of resulting equations in R̲ and R̲ₒ for
+# just R̲₀ (there's just 6 equations we need to derive for all 3 coords and we're only testing some of them). So this is doable in a one-line function
+# with a bit more pen-and-paper work....
