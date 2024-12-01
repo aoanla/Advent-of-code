@@ -9,6 +9,8 @@ res = sum(abs.(l .- r))
 
 print("Pt 1: $res\n")
 
+#note - the *actual input* that AoC gives you apparently never has repeated entries in the left column (unlike the test case it shows you)
+#this means that it is less suboptimal to just use countmap than to do this stuff below (which *would* be much better if the actual input was as complex as the test case)
 function matchiter(l,r)
     oldi = -1
     count = 0 #counting *ls*
