@@ -4,6 +4,8 @@
 #transpose, then by row (sort, dedup (with new array on stack = counts ) )
  ≡(°⊚⊛⟜◴⍆)⍉
 
+
+#I don't need to do this because I can use table to do the cross-multiply I want (I always forget about table)
 ▽ (on ar2col1) ∈ (a1col1) (a2col2) 
 ▽ (on ar2col2) ∈ (a1col2) (a2col1)
 couple (ar2col1) (ar2col2)
