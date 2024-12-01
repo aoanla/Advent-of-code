@@ -9,8 +9,6 @@ res = sum(abs.(l .- r))
 
 print("Pt 1: $res\n")
 
-d = Dict(Float64 => Int32)
-
 function matchiter(l,r)
     oldi = -1
     count = 0 #counting *ls*
