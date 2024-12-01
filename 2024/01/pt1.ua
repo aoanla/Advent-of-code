@@ -1,0 +1,3 @@
+# Experimental!
+⊜(⊜⋕⊸≠@ )⊸≠@\n &fras "input"
+/+ ≡(⌵/-) ⍜⍉ (≡⍆)
