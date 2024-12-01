@@ -29,6 +29,41 @@ fn main() {
     l.sort();
     r.sort();
     
-    let pt1: isize = zip(l,r).map(|(li,ri)| (li-ri).abs()).sum();
+    let pt1: isize = zip(&l,&r).map(|(li,ri)| (li-ri).abs()).sum();
     println!("Pt 1: {}", pt1);
+
+    let mut tot = 0;
+    let mut val = 0;
+    let mut valmul = 0;
+    let mut liter = l.iter();
+    let mut lv = liter.next().unwrap();
+    'outer: for ri in r.iter() {
+        let mut brk = false;
+        if *ri == val {
+            tot+=valmul;
+            continue;
+        }
+        valmul = 0;
+
+        while ri > lv {
+            match liter.next() {
+                Some(ll) => { lv = ll; },
+                None => { break 'outer; }
+            }
+        }
+        while ri == lv {
+            val = *ri;
+            valmul += *lv;
+            match liter.next() {
+                Some(ll) => { lv = ll },
+                None => { brk = true; break; }
+            }
+        }
+        tot += valmul;
+        if brk == true {
+            break 'outer;
+        }
+    }
+    
+    println!("Pt2: {}",tot);
 }

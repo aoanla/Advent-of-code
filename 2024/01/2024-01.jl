@@ -18,7 +18,7 @@ function matchiter(l,r)
     for ri ∈ r
         #this can only happen if we already found a suitable candidate
         if ri == oldi
-            tot+=oldi*count
+            tot+=count
             continue
         end
         count = 0
@@ -34,7 +34,8 @@ function matchiter(l,r)
         brk && break
         #count up all the identical elements in l (because our total contribution is count(ls)*count(rs)*val)
         while ri == li
-            count += 1
+            count += li
+            oldi = ri
             state = iterate(l,nxt)
             if isnothing(state)
                 brk=true
@@ -42,8 +43,7 @@ function matchiter(l,r)
             end
             li, nxt = state
         end
-        oldi = ri
-        tot += oldi * count
+        tot += count
         brk && break #out of ls
     end
     tot
