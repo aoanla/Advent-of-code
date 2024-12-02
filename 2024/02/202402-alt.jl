@@ -1,19 +1,21 @@
-
+#work in progress for non brute-force-ish version
 input = readlines("input");
 
-
+#return v, the index of the first failing element
 function validate(l)
     (oldli,nxt) = iterate(l)
     (li, nxt) = iterate(l,nxt)
     olddiff = li - oldli
     if abs(olddiff) > 3 || abs(olddiff) == 0
-        return false
+        return 1  #or 2?
     end
     while !isnothing(iterate(l,nxt))
         (newli, nxt) = iterate(l,nxt)
         diff = newli - li 
+        #there's a special case here where the *first* diff is the wrong sign
+        #but makes everything else look wrong as a result which we don't handle
         if abs(diff) > 3 || abs(diff) == 0 || diff*olddiff < 0
-            return false
+            return nxt-1 #the item that broke
         end
         #olddiff = diff - we're now counting violations rel to the first
         # I guess the problem here is that we don't know that the first diff isn't the "wrong" one
@@ -21,13 +23,13 @@ function validate(l)
         # difference is opposite to the first, that's 1 violation)
         li = newli
     end
-    true
+    0
 end
 
 pt1 = map(input) do line 
     l = parse.(Int64, split(line, " "))
     validate(l)
-end |> sum
+end |> (x -> x.==0) |> count
 
 #pt1 = sum(mapslices(test_line, input; dims=[2,]))
 
@@ -38,18 +40,10 @@ print("Pt1: $pt1\n")
 
 pt2 = map(input) do line 
     l = parse.(Int64, split(line, " "))
-    if validate(l) 
-        true
-    else
-        #possibly the optimal solution doesn't do this - it just counts
-        #the *number* of violations in validate and returns true if its <= 1
-        for i ∈ eachindex(l)
-            if validate(vcat(l[begin:i-1],l[i+1:end]))
-                return true
-            end
-        end
-        false
-    end
+    (v = validate(l)) == 0 && return true
+    #second chance, removing the first failing element
+    validate(vcat(l[begin:v-1],l[v+1:end])) == 0 && return true
+    false
 end |> sum
 
 print("Pt2: $pt2\n")
