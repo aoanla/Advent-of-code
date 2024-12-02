@@ -1,8 +1,12 @@
 using DelimitedFiles
 
-input = readdlm("inputtest");
+input = readlines("input");
 
-pt1 = mapslices(input; dims=[2,]) do l  
+print("$(input[1,:])")
+
+
+pt1 = map(input) do line 
+    l = parse.(Int64, split(line, " "))  
     (oldli,nxt) = iterate(l)
     (li, nxt) = iterate(l,nxt)
     olddiff = li - oldli
