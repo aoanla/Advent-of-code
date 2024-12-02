@@ -1,6 +1,5 @@
-using DelimitedFiles
 
-input = readlines("inputtest");
+input = readlines("input");
 
 
 function validate(l)
