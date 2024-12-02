@@ -18,7 +18,20 @@ function validate(l; dampener = false)
         diff = newli - li 
         #there's a special case here where the *first* diff is the wrong sign
         #but makes everything else look wrong as a result which we don't handle
-        if abs(diff) > 3 || abs(diff) == 0 || diff*olddiff < 0
+        if abs(diff) > 3 || diff == 0 
+            dampener && break;
+            return false;
+        end
+        if  diff*olddiff < 0
+            if nxt == 4 #we're testing the *second* diff (2,3)[olddiff is the first]
+                #so we need to check the *third* diff to see if olddiff is the wrong one
+                (peek,_) = iterate(l, 4)
+                if (peek-newli)*olddiff < 0 #olddiff is wrong, so we need to restart from 2,3
+                    olddiff = diff #update diff, and then reset our loop nxt
+                    li = newli
+                end #diff is wrong, so we do want to skip it, and    
+            end
+            #this is a special case because we need to detect if olddiff is actually the wrong one
             dampener && break;
             return false;
         end
@@ -37,7 +50,7 @@ function validate(l; dampener = false)
         diff = newli - li 
         #there's a special case here where the *first* diff is the wrong sign
         #but makes everything else look wrong as a result which we don't handle
-        if abs(diff) > 3 || abs(diff) == 0 || diff*olddiff < 0
+        if abs(diff) > 3 || diff == 0 || diff*olddiff < 0
             return false
         end
         li = newli
