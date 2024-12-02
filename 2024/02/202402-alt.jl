@@ -2,6 +2,10 @@
 input = readlines("input");
 
 #return v, the index of the first failing element
+
+#this is too complicated - I think what we actually do is recurse (with dampener = false)
+# when we hit a problem, removing each of the two possible issues (li and newli) to
+# see if either fixes the problem.
 function validate(l; dampener = false)
     (oldli,nxt) = iterate(l)
     (li, nxt) = iterate(l,nxt)
