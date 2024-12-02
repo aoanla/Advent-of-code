@@ -15,7 +15,10 @@ function validate(l)
         if abs(diff) > 3 || abs(diff) == 0 || diff*olddiff < 0
             return false
         end
-        olddiff = diff
+        #olddiff = diff - we're now counting violations rel to the first
+        # I guess the problem here is that we don't know that the first diff isn't the "wrong" one
+        # so we'd need to count the violations for diff sign separately (if *every other*
+        # difference is opposite to the first, that's 1 violation)
         li = newli
     end
     true
