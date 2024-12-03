@@ -11,6 +11,11 @@ print("pt1 = $pt1\n")
 
 global enable = true
 
+
+#we could also do two eachmatches - one for sequences which have a do() and a don't() bracket them
+# and then the pt1 eachmatch over each of those 
+# we'd need to prepend a do() to the start of the string...
+#this is less stateful and doesn't need the global, so I guess "cleaner"?
 pt2 = mapreduce(+, file) do line
     mapreduce(+, eachmatch(r"mul\(([1-9][0-9]?[0-9]?),([1-9][0-9]?[0-9]?)\)|do(?:n't)?\(\)", line)) do m
         if m.match == "do()" 
