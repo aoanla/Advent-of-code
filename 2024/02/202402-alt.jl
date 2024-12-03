@@ -19,6 +19,7 @@ function validate(l; dampener = false)
         diff = newli - li 
         if abs(diff) > 3 || diff == 0 
             dampener || return false
+            #we *could* just validate the tail here, but I don't need the extra efficiency
             return validate(vcat(l[begin:nxt-2],l[nxt:end])) | validate(vcat(l[begin:nxt-1],l[nxt+1:end]))
         end
         if  diff*olddiff < 0
@@ -28,6 +29,7 @@ function validate(l; dampener = false)
             if nxt == 4 #we're testing the *second* diff (2,3)[olddiff is the first]
                 return validate(l[2:end]) | validate(vcat(l[1:1],l[3:end])) | validate(vcat(l[1:2],l[4:end]))
             end
+            #we *could* just validate the tail here, but I don't need the extra efficiency
             return validate(vcat(l[begin:nxt-2],l[nxt:end])) | validate(vcat(l[begin:nxt-1],l[nxt+1:end]))
         end
         li = newli
