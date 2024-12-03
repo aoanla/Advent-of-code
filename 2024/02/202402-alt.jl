@@ -13,7 +13,7 @@ function validate(l; dampener = false)
     skip = false
     if abs(olddiff) > 3 || abs(olddiff) == 0
         dampener || return false  #or 2 
-        skip = true   
+        return validate(l[2:end]) | validate(vcat(l[1:1],l[3:end]))   
         #not quite true as we also need to sort out if we're removing the 1st or 2nd elem...
     end
     #first loop, until first "break"
@@ -23,21 +23,15 @@ function validate(l; dampener = false)
         #there's a special case here where the *first* diff is the wrong sign
         #but makes everything else look wrong as a result which we don't handle
         if abs(diff) > 3 || diff == 0 
-            dampener && break;
-            return false;
+            dampener || return false
+            return validate(vcat(l[begin:nxt-2],l[nxt:end])) | validate(vcat(l[begin:nxt-1],l[nxt+1:end]))
         end
         if  diff*olddiff < 0
+            dampener || return false
             if nxt == 4 #we're testing the *second* diff (2,3)[olddiff is the first]
-                #so we need to check the *third* diff to see if olddiff is the wrong one
-                (peek,_) = iterate(l, 4)
-                if (peek-newli)*olddiff < 0 #olddiff is wrong, so we need to restart from 2,3
-                    olddiff = diff #update diff, and then reset our loop nxt
-                    li = newli
-                end #diff is wrong, so we do want to skip it, and    
+                return validate(l[2:end]) | validate(vcat(l[1:1],l[3:end])) | validate(vcat(l[1:2],l[4:end]))
             end
-            #this is a special case because we need to detect if olddiff is actually the wrong one
-            dampener && break;
-            return false;
+            return validate(vcat(l[begin:nxt-2],l[nxt:end])) | validate(vcat(l[begin:nxt-1],l[nxt+1:end]))
         end
         #olddiff = diff - we're now counting violations rel to the first
         # I guess the problem here is that we don't know that the first diff isn't the "wrong" one
@@ -45,20 +39,7 @@ function validate(l; dampener = false)
         # difference is opposite to the first, that's 1 violation)
         li = newli
     end
-    #we only get here if we had a break - if this didn't happen in the first diff, 
-    #then we can just skip to the next one. If it *did* happen in the first diff... 
-    # we need to check if the issue is elems (1,2) or elems (2,3) if it's a sign issue
-    #second loop, after "fixing" first break, if dampener set
-    while !isnothing(iterate(l,nxt)) #"skips" an elem
-        (newli, nxt) = iterate(l,nxt)
-        diff = newli - li 
-        #there's a special case here where the *first* diff is the wrong sign
-        #but makes everything else look wrong as a result which we don't handle
-        if abs(diff) > 3 || diff == 0 || diff*olddiff < 0
-            return false
-        end
-        li = newli
-    end
+
     true
 end
 
