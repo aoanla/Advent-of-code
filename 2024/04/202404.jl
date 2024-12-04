@@ -16,8 +16,8 @@ grid = [g ;; empty ;; empty ;; empty] #bottom padding
 directions = [ 
     [[0,1,2,3],[0,0,0,0]],
     [[0,0,0,0],[0,1,2,3]],
-    [[0,1,2,3],[0,1,2,3]],
-    [[0,1,2,3],[3,2,1,0]], #might be the wrong way around - not using neg indexes so our padding works for this
+    [[0,1,2,3],[0,1,2,3]], #diag \
+    [[0,1,2,3],[3,2,1,0]], #neg diag /
 ]
 
 matches = [['X','M','A','S'], ['S','A','M','X']]
@@ -34,10 +34,21 @@ for i ∈ 1:llim, j ∈ 1:llim
     end
 end
 
-print("Pt1 = $tot")
+print("Pt1 = $tot\n")
 
+function test_pair(p)
+    (p[1] == 'M' && p[2] == 'S') || (p[1] == 'S' && p[2] == 'M') 
+end
 
+tot = 0
+for i ∈ 1:llim, j ∈ 1:llim 
+    #needs a central A         #\ diag
+    global tot += ( grid[i+1,j+1] == 'A' && 
+        test_pair(grid[CartesianIndex.(i.+[0,2],j.+[0,2])]) &&
+        test_pair(grid[CartesianIndex.(i.+[2,0],j.+[0,2])]) )
+end
 
+print("Pt2 = $tot\n")
 
 
 
