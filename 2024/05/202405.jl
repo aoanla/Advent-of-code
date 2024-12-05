@@ -8,26 +8,6 @@
  topo = split(topo, '\n')
  lists = split(lists, '\n')
 
-#function topo_sort!(nodes, inedges, startnodes_)
-#    order = Dict{Int32, Int32}() #node -> order mapping
-#    count_ = 1
-#    while !isempty(startnodes_)
-#        s = pop!(startnodes_)
-#        order[s] = count_
-#        count_+=1
-#        if !haskey(nodes, s)
-#            continue
-#        end
-#        for v ∈ nodes[s]
-#            inedges[v] -= 1
-#            if inedges[v] == 0
-#                push!(startnodes_, v)
-#            end
-#        end
-#    end
-#    order
-#end
-
  function parse_topo(topo)
     nodes = Dict{Int32,Set{Int32}}() #nodes
     for pair ∈ topo
@@ -56,23 +36,41 @@ function check_sort(list, nodes)
             nodes_[li] = Set{Int32}()
         end
     end
-    for li ∈ list 
-        inedges_[li] != 0 && return 0 #not a valid list, so contributes 0 
-            #for pt2, we know the list was sorted up to the above point, so we only need to sort
-            #the parts from this node onwards (and only until we get to the middle!)
+    mid = (length(list)+1)÷2
+    val = -1
+    for (n,li) ∈ enumerate(list) 
+        #not a valid list, so contributes 0
+        if inedges_[li] != 0 
+            val != -1 && return [0,val] #already found the midpoint and know this isn't fully sorted so can return early  
+            #otherwise, sort the list until we get to the midpoint, starting from correct entry
+            elems = Set(list[n:end])
+            tops = filter(li->inedges_[li]==0,elems)
+            while !isempty(tops) 
+                li_ = pop!(tops)
+                n == mid && return  [0,li_] #early return
+                for v ∈ nodes_[li_]
+                    inedges_[v] -= 1
+                    inedges_[v] == 0 && push!(tops, v) #we can probably assume for this that tops is always 1 element in size and just assign to var, but this is robust
+                end
+                n+=1
+            end
+        end
         for v ∈ nodes_[li]
             inedges_[v] -= 1
         end
+        if n == mid 
+            val = li #we found our 
+        end
     end
     #this should now return a tuple of (alreadysorted,neededsorting) so we can sum over it properly with broadcasting
-    return list[(length(list)+1)÷2]
+    return [val,0]
 end
         
 function check_lists(lists,order)
-    tot = 0
+    tot = [0,0]
     for l ∈ lists
         ll = parse.(Int32, split(l,','))
-        tot += check_sort(ll, nodes)
+        tot .+= check_sort(ll, nodes)
     end
     tot
 end
@@ -81,4 +79,4 @@ end
 nodes = parse_topo(topo)
 #print("$ordering")
 pt1 = check_lists(lists,nodes)
-print("Pt1 = $pt1")
+print("Pt1,Pt2 = $pt1")
