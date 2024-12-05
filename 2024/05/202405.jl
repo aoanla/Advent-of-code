@@ -66,7 +66,7 @@ function check_sort(list, nodes)
     return [val,0]
 end
         
-function check_lists(lists,order)
+function check_lists(lists)
     tot = [0,0]
     for l ∈ lists
         ll = parse.(Int32, split(l,','))
