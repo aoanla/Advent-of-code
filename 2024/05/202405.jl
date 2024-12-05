@@ -66,7 +66,7 @@ function check_sort(list, nodes)
     return [val,0]
 end
         
-function check_lists(lists)
+function check_lists(lists, nodes)
     tot = [0,0]
     for l ∈ lists
         ll = parse.(Int32, split(l,','))
@@ -78,5 +78,5 @@ end
 
 nodes = parse_topo(topo)
 #print("$ordering")
-pt1 = check_lists(lists,nodes)
+pt1 = check_lists(lists, nodes)
 print("Pt1,Pt2 = $pt1")
