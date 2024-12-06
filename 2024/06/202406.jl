@@ -144,11 +144,8 @@ end
 
 #set of obstacles that work
 obs = Set{Tuple{Int32,Int32}}()
-prevs = Set{Tuple{Int32,Int32}}()
+prevs = Set([loc]) #we shouldn't check the first square!
 
-### current number 1799, which is still "too high" apparently - after remembering we can only hit an obstacle once (the first time our path hits the square)
-###   this means that, presumably, we're either falsely identifying loops or testing places that can't be passed through
-### according to someone else's solution, the soln is 1796 so I have 3 false positives... which are going to be hard to find because my solution doesn't look like anyone else's
 
 for segment ∈ path
     #get start,end, dir  
