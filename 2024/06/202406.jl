@@ -71,3 +71,9 @@ end
 
 print("$(pt1(s,loc))")
 
+#pt2 
+
+#conditions - presumably can't be "on the initial line of the guard", not just where she is 
+# for each new line, new possible obstructions only possible if there's an intersection (?)
+# and we would fold back onto the previous path (that is, we intersect with a right-turn compatible line)
+# -- or we *would* join a right-turn compatible line if we turned right
