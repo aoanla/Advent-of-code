@@ -49,12 +49,21 @@ function pt1(s,loc)
         isempty(candidates) && break #actually need to add final line here to boundary
         (len,nextloc) =  minimum( candidates )
         line = (dir == 2 || dir == 3) ? (loc,nextloc, axis[dir]) : (nextloc,loc, axis[dir]) 
-        dir = rotate(dir)
+
         inters = mapreduce(+, history) do c
             intersect(line, c)
         end
         tot += len - inters
         push!(history,line)
+        #find new direction, and start off with a single step to avoid intersection
+        dir = rotate(dir)
+        #need to check if we would step into a new barrier 
+        # case:            ...# 
+        #                  ...^# 
+        # which actually results in a 180 degree turn
+        if (nextloc .- offset[dir]) ∈ s 
+            dir = rotate(dir)
+        end
         loc = nextloc .- offset[dir]
     end
     #add final line to boundary
@@ -74,6 +83,11 @@ print("$(pt1(s,loc))")
 #pt2 
 
 #conditions - presumably can't be "on the initial line of the guard", not just where she is 
-# for each new line, new possible obstructions only possible if there's an intersection (?)
-# and we would fold back onto the previous path (that is, we intersect with a right-turn compatible line)
-# -- or we *would* join a right-turn compatible line if we turned right [special case for the initial position, where we start "mid line" so points "before" it also count]
+
+#we can extend the intersection checker to instead check for loops
+#   in this case, we want path segments that *are* colinear, have the same const coord 
+#       the same direction sense (> or <)
+#       and whose variable coords overlap (or are the same)
+
+# it might also be useful to memoise loops that *don't* include the obstruction we add
+# as we can detect them faster that way
