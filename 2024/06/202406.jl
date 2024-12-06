@@ -78,7 +78,7 @@ function pt1(s,loc)
     end 
     tot += len - inters
     push!(history,line) 
-    (tot, history[3:end]) #not clear if we're supposed to ignore the first segment or just the first square
+    (tot, history[2:end]) #not clear if we're supposed to ignore the first segment or just the first square
 end
 
 (pt_1, path) =  pt1(s,loc)
@@ -144,9 +144,11 @@ end
 
 #set of obstacles that work
 obs = Set{Tuple{Int32,Int32}}()
+prevs = Set{Tuple{Int32,Int32}}()
 
-### current number 1871, which is "too high" apparently (1800 is also too high, so we're off by quite a lot)
+### current number 1799, which is still "too high" apparently - after remembering we can only hit an obstacle once (the first time our path hits the square)
 ###   this means that, presumably, we're either falsely identifying loops or testing places that can't be passed through
+### according to someone else's solution, the soln is 1796 so I have 3 false positives... which are going to be hard to find because my solution doesn't look like anyone else's
 
 for segment ∈ path
     #get start,end, dir  
@@ -156,9 +158,10 @@ for segment ∈ path
     (strt,end_, step) = (dir==2 || dir==3) ? (segment[1],segment[2], 1) : (segment[2], segment[1], -1)
     pts = isodd(dir) ? [(i,strt[2]) for i ∈ strt[1]:step:end_[1]] : [(strt[1],i) for i ∈ strt[2]:step:end_[2] ]
     for pt ∈ pts
-        pt ∈ obs && continue  #already added this obstacle location 
+        (pt ∈ prevs) && continue  #already tried this obstacle location - we can only hit it from one side (the first time we meet it on the path)
+        push!(prevs, pt)
         find_loop(s ∪ [pt], pt .+ offset[dir], bounce_dir ) && push!(obs, pt)
     end
 end
  
-print("Pts2 = $(length(obs))")
+print("Pts2 = $(length(obs))\n")
