@@ -40,15 +40,15 @@ function pt1(s,loc)
     dir = 1
     #or via lambdas for match (<, ==), (==, >), (>, ==), (==, <)
     history = [((-2,-2),(-1,-2),1)]
-    tot = 1
+    tot = 0
     while true
         test(x) = reduce(&, broadcast.(dirs[dir] , x, loc))
         candidates = map(filter(test, s)) do cand
-            (abs(cand[axis[dir]] .- loc[axis[dir]])-1, cand .+ offset[dir]) 
+            (abs(cand[axis[dir]] .- loc[axis[dir]]), cand .+ offset[dir]) 
         end
         isempty(candidates) && break #actually need to add final line here to boundary
         (len,nextloc) =  minimum( candidates )
-        line = (dir == 1 || dir == 4) ? (loc,nextloc, axis[dir]) : (nextloc,loc, axis[dir]) 
+        line = (dir == 2 || dir == 3) ? (loc,nextloc, axis[dir]) : (nextloc,loc, axis[dir]) 
         dir = rotate(dir)
         inters = mapreduce(+, history) do c
             intersect(line, c)
@@ -56,15 +56,19 @@ function pt1(s,loc)
         tot += len - inters
         print("tot = $tot δ($len - $inters)\n")
         push!(history,line)
-        loc = nextloc
+        loc = nextloc .- offset[dir]
     end
     #add final line to boundary
-    nextloc = axis[dir] == 1 ? ( (dir==1 ? 0 : boundaries[1]+1) , loc[2]) : (loc[1],  (dir==4 ? 0 : boundaries[2]+1 )) 
-    line = (dir == 1 || dir == 4) ? (loc,nextloc, axis[dir]) : (nextloc,loc, axis[dir])
+    
+    nextloc = axis[dir] == 1 ? ( (dir==1 ? 1 : boundaries[1]) , loc[2]) : (loc[1],  (dir==4 ? 1 : boundaries[2] )) 
+    line = (dir == 2 || dir == 3) ? ( loc, nextloc, axis[dir]) : (nextloc,loc, axis[dir])
     len = nextloc[axis[dir]] - loc[axis[dir]] 
-    tot += len - mapreduce(+, history) do c
+    inters = mapreduce(+, history) do c
         intersect(line,c)
     end 
+    tot += len - inters 
+    print("tot = $tot δ($len - $inters)\n\n")
+    print("Final history: $history\n")
     tot
 end
 
