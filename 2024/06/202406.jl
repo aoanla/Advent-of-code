@@ -2,6 +2,10 @@
 
 #it's going to be worth the upfront cost because then "lines" are just finding the next post you collide with from a small pool
 #(and lengths are just subtraction)
+const dirs = ((<,==),(==,>),(>,==),(==,<)) #up, unless I have my grid rotated
+const axis = (1,2,1,2)
+const offset = ((1,0),(0,-1),(-1,0),(0,1))
+
 
 #set of points
 s = Vector{Tuple{Int32,Int32}}()
@@ -15,7 +19,7 @@ for (x, l) ∈ enumerate(lines)
         end 
     end
 end
-boundaries = (length(lines), length(lines[1]))
+const boundaries = (length(lines), length(lines[1]))
 #exit()
 
 rotate(d) = begin 
@@ -32,9 +36,9 @@ function intersect(a,b)
 end
 
 function pt1(s,loc)
-    dirs = ((<,==),(==,>),(>,==),(==,<)) #up, unless I have my grid rotated
-    axis = (1,2,1,2)
-    offset = ((1,0),(0,-1),(-1,0),(0,1))
+    #dirs = ((<,==),(==,>),(>,==),(==,<)) #up, unless I have my grid rotated
+    #axis = (1,2,1,2)
+    #offset = ((1,0),(0,-1),(-1,0),(0,1))
     dir = 1
     #or via lambdas for match (<, ==), (==, >), (>, ==), (==, <)
     history = [((-2,-2),(-1,-2),1, 1)]
@@ -72,12 +76,13 @@ function pt1(s,loc)
     inters = mapreduce(+, history) do c
         intersect(line,c)
     end 
-    tot += len - inters 
-    (tot, history[2:end])
+    tot += len - inters
+    push!(history,line) 
+    (tot, history[3:end]) #not clear if we're supposed to ignore the first segment or just the first square
 end
 
 (pt_1, path) =  pt1(s,loc)
-print("Pt1 = $pt1")
+print("Pt1 = $pt_1\n")
 
 #pt2 
 
@@ -103,11 +108,11 @@ end
 
 function find_loop(s, loc, dir)
     #do mostly what pt1 does, but our "itersection" test is now a test for overlapping an existing element of the history, and we store a sense param for this
-    dirs = ((<,==),(==,>),(>,==),(==,<)) #up, unless I have my grid rotated
-    axis = (1,2,1,2)
-    offset = ((1,0),(0,-1),(-1,0),(0,1))
+    #dirs = ((<,==),(==,>),(>,==),(==,<)) #up, unless I have my grid rotated
+    #axis = (1,2,1,2)
+    #offset = ((1,0),(0,-1),(-1,0),(0,1))
     #utility for right-ward rotation, assuming my axes are the right way around
-    history = Set{Tuple{Int32,Int32,Int32}}
+    history = Set{Tuple{Int32,Int32,Int32}}()
     while true
         test(x) = reduce(&, broadcast.(dirs[dir] , x, loc))
         candidates = map(filter(test, s)) do cand
@@ -115,7 +120,7 @@ function find_loop(s, loc, dir)
         end
         isempty(candidates) && return false #escape
         (len,nextloc) =  minimum( candidates )
-        line = (nextloc[0], nextloc[1], dir)
+        line = (nextloc[1], nextloc[2], dir)
         
         line ∈ history && return true #loop happened, as path segment is in history
         push!(history,line)
@@ -128,6 +133,7 @@ function find_loop(s, loc, dir)
         if (nextloc .- offset[dir]) ∈ s 
             dir = rotate(dir)
         end
+        loc = nextloc .- offset[dir]
     end
         #add final line to boundary - don't care about this for pt2 as we don't need length
     true #just in case
@@ -139,17 +145,19 @@ end
 #set of obstacles that work
 obs = Set{Tuple{Int32,Int32}}()
 
+### current number 1871, which is "too high" apparently (1800 is also too high, so we're off by quite a lot)
+###   this means that, presumably, we're either falsely identifying loops or testing places that can't be passed through
+
 for segment ∈ path
     #get start,end, dir  
     dir = segment[4]
     bounce_dir = rotate(dir)
+    #this, if we're not on the initial segment, needs to step back one to consider the start of the path in this direction
     (strt,end_, step) = (dir==2 || dir==3) ? (segment[1],segment[2], 1) : (segment[2], segment[1], -1)
     pts = isodd(dir) ? [(i,strt[2]) for i ∈ strt[1]:step:end_[1]] : [(strt[1],i) for i ∈ strt[2]:step:end_[2] ]
     for pt ∈ pts
-        if pt ∈ obs #already added this obstacle location 
-            continue 
-        end
-        find_loop(s ∪ pt, pt .+ offset[dir], bounce_dir ) && push!(obs, pt)
+        pt ∈ obs && continue  #already added this obstacle location 
+        find_loop(s ∪ [pt], pt .+ offset[dir], bounce_dir ) && push!(obs, pt)
     end
 end
  
