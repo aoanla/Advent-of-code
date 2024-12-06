@@ -6,7 +6,7 @@
 #set of points
 s = Vector{Tuple{Int32,Int32}}()
 loc = (nothing,nothing)
-lines = readlines("inputtest")
+lines = readlines("input")
 for (x, l) ∈ enumerate(lines)
     for (y,ch) ∈ enumerate(collect(l))
         ch == '#' && push!(s, (x,y))
@@ -24,8 +24,8 @@ function intersect(a,b)
     #parallel so no intersection [if we're not looping] - if we are looping we check if the const bits are the same and then intersect the ranges
     a[3] == b[3] && return false
     #intersect if the "const" dir of each line is in the range of the other 
-    #this is wrong for the intersection axes
-    (a[1][a[3]] <= b[2][a[3]]) && (a[1][a[3]] >= b[1][a[3]]) && (b[1][b[3]] <= a[2][b[3]]) && (b[1][b[3]] >= a[1][b[3]])     
+    tests =( (a[1][b[3]] <= b[2][b[3]]) , (a[1][b[3]] >= b[1][b[3]]) , (b[1][a[3]] <= a[2][a[3]]) , (b[1][a[3]] >= a[1][a[3]]) )    
+    return reduce(&, tests)
 end
 
 function pt1(s,loc)
@@ -40,7 +40,7 @@ function pt1(s,loc)
     dir = 1
     #or via lambdas for match (<, ==), (==, >), (>, ==), (==, <)
     history = [((-2,-2),(-1,-2),1)]
-    tot = 0
+    tot = 1
     while true
         test(x) = reduce(&, broadcast.(dirs[dir] , x, loc))
         candidates = map(filter(test, s)) do cand
@@ -54,7 +54,6 @@ function pt1(s,loc)
             intersect(line, c)
         end
         tot += len - inters
-        print("tot = $tot δ($len - $inters)\n")
         push!(history,line)
         loc = nextloc .- offset[dir]
     end
@@ -67,8 +66,6 @@ function pt1(s,loc)
         intersect(line,c)
     end 
     tot += len - inters 
-    print("tot = $tot δ($len - $inters)\n\n")
-    print("Final history: $history\n")
     tot
 end
 
