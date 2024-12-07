@@ -4,6 +4,9 @@
 ####           2: the closer to the middle a * is, the larger the answer, so if we ever go > the target with our first new * (and +++ in the rhs), we can quit)
 ####           3: we can memoise all the substrings of (+,+,+) from the right to make that sub-calc a lookup not lots of + )
 
+## other approaches: we could try testing divisibility of the solutions from the right hand side (and "deconcating" them)
+###  I'm not sure of the time trade off between division being slow and this easily discounting parts of the search space (it might pay off, but...)
+
 struct item
     target::Int128 
     elems::Vector{Int128}
