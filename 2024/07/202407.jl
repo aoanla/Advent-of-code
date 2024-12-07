@@ -5,43 +5,49 @@
 ####           3: we can memoise all the substrings of (+,+,+) from the right to make that sub-calc a lookup not lots of + )
 
 struct item
-    target::Int64 
-    elems::Vector{Int64}
-    memo::Vector{Int64}
+    target::Int128 
+    elems::Vector{Int128}
+    memo::Vector{Int128}
 #    revmemo::Vector{Int64}
 end
 
 probs = map(readlines("input")) do l
     s,p = split(l,':')
-    p = parse.(Int64,collect(split.(p)))
+    p = parse.(Int128,collect(split.(p)))
     memo = reverse(cumsum(reverse(p))) #making use of commutivity of + = these are the sums for the *rhs* fragments, for a given position 
-    item(parse(Int64,s),p, [memo ; 0])
+    item(parse(Int128,s),p, [memo ; 0])
 end
 
 
-function try_asterisk(i, accum)
+function try_asterisk(i)
     max_ = length(i.elems) - 1
+    accum = 0
     for p ∈ 1:max_
         accum += i.elems[p]
-        #try asterisk positions - l to r, using memo, revmemo to avoid recomputation
+        #try asterisk positions - l to r, using memo to avoid recomputation
         lhs = accum * i.elems[p+1]
         rhs = i.memo[p+2]
-        lhs + rhs == i.target && return true
-        p == max_ && return false
-        try_asterisk( item(i.target, [lhs ; i.elems[p+2:end]], i.memo[p+1:end]), accum ) && return true
+
+        #lhs > i.target && return false #lhs already bigger than the answer - but if there's a terminal 1 (sigh) then we can still get a valid solution
+        lhs + rhs == i.target && return true  #found a solution
+        p == max_ && return false #can't recurse further, as already in the final position for an asterisk 
+
         #recurse into subproblems for extra asterisks, where subproblem is (currentstate, [...rest of problem])
+        #is this function call right- are we accumulating wrong (accum + lhs double count?)
+        try_asterisk( item(i.target, [lhs ; i.elems[p+2:end]], i.memo[p+1:end]) ) && return true
+
     end
     return false
 end
 
-valid = Vector{Int64}()
+valid = Vector{Int128}()
 for i ∈ probs
-    i.target < first(i.memo) && continue #if even the total sum > target, nothing else will get us an answer
-    if i.target == first(i.memo) 
+    #i.target < first(i.memo) && print("sum case: $i\n") #values that are just 1 in the sum *do* reduce the total when multiplied so we can't early exit here
+    if i.target == first(i.memo) #possible that we might have a solution for all sums
         push!(valid, i.target)
         continue
     end 
-    try_asterisk(i, 0) && push!(valid, i.target)
+    try_asterisk(i) && push!(valid, i.target)
 end
 
 print("$valid, $(sum(valid))\n")
