@@ -10,14 +10,14 @@ struct item
 #    revmemo::Vector{Int64}
 end
 
-probs = Set(map(readlines("inputtest")) do l
+probs = Set(map(readlines("input")) do l
     s,p = split(l,':')
     p = parse.(Int128,collect(split.(p)))
     memo = reverse(cumsum(p)) #making use of commutivity of + = these are the sums for the *rhs* fragments, for a given position 
     item(parse(Int128,s),reverse(p), [memo; 0])
 end)
 
-print("$probs")
+#print("$probs")
 
 function try_asterisk(i)
     max_ = length(i.elems) - 1
@@ -25,7 +25,7 @@ function try_asterisk(i)
     for p ∈ 1:max_
         divisor = i.elems[p]
         target % divisor != 0 && return false #asterisk not possible here for all substrings as target is not divisible
-        target_ask = i.target ÷ divisor
+        target_ask = target ÷ divisor
         target_ask == i.memo[p+1] && return true
         #and recurse 
         try_asterisk( item(target_ask, i.elems[p+1:end], i.memo[p+1:end]) ) && return true
@@ -60,28 +60,30 @@ end
 function try_ask_pipes(i)
     max_ = length(i.elems) - 1
     target = i.target
+
     for p ∈ 1:max_
         accum = i.elems[p]
         #try asterisk positions - l to r, using memo to avoid recomputation
         
         #this is instead a division test 
-        i.target % accum != 0 && return false
-        target_ask = i.target ÷ accum
-        target_ask == i.memo[p+1] && return true #remainder are +s    
-
+        t1 = target % accum == 0
+        if t1 
+            target_ask = target ÷ accum
+            target_ask == i.memo[p+1] && return true #remainder are +s    
+            try_ask_pipes( item(target_ask, i.elems[p+1:end], i.memo[p+1:end]) ) && return true
+        end
         ###concat stuff 
 
-        #try concat  - this bit is broken for now
+        #try concat  - this should work now, because we removed the incorrect early return above
         #deconcat test:
-        deconcat_p(i.target,accum) && return false 
-        target_pipe = i.target ÷ 10^(floor(Int64,log10(accum)) + 1)  #deconcat 
-        target_pipe == i.memo[p+1] && return true #remainder are +s
-
-        #and recurse
+        t2 = deconcat_p(target,accum)
+        if t2 
+            target_pipe = target ÷ 10^(floor(Int64,log10(accum)) + 1)  #deconcat 
+            target_pipe == i.memo[p+1] && return true #remainder are +s
+            try_ask_pipes( item(target_pipe, i.elems[p+1:end], i.memo[p+1:end])) && return true
+        end
+        #and recurse, if at least one path succeeded
         p == max_ && return false #can't recurse and out of options 
-
-        try_ask_pipes( item(target_ask, i.elems[p+1:end], i.memo[p+1:end]) ) && return true
-        try_ask_pipes( item(target_pipe, i.elems[p+1:end], i.memo[p+1:end])) && return true
 
         # we *loop* by subtracting the next element from p!!!
         target -= accum
@@ -91,6 +93,7 @@ end
 
 
 #only test the ones we can't already solve!
+
 remaining = setdiff!(probs, valid)
 
 valid_2 = Set{item}()
@@ -99,5 +102,6 @@ for i ∈ remaining
     try_ask_pipes(i) && push!(valid_2, i)
 end
 
+#print("$valid_2")
 print("Pt2 = $(mapreduce(x->x.target, +, valid_2)+pt1)\n")
 
