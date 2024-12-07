@@ -11,12 +11,12 @@ struct item
 #    revmemo::Vector{Int64}
 end
 
-probs = map(readlines("input")) do l
+probs = Set(map(readlines("inputtest")) do l
     s,p = split(l,':')
     p = parse.(Int128,collect(split.(p)))
     memo = reverse(cumsum(reverse(p))) #making use of commutivity of + = these are the sums for the *rhs* fragments, for a given position 
     item(parse(Int128,s),p, [memo ; 0])
-end
+end)
 
 
 function try_asterisk(i)
@@ -40,15 +40,62 @@ function try_asterisk(i)
     return false
 end
 
-valid = Vector{Int128}()
+valid = Set{item}()
 for i ∈ probs
     #i.target < first(i.memo) && print("sum case: $i\n") #values that are just 1 in the sum *do* reduce the total when multiplied so we can't early exit here
     if i.target == first(i.memo) #possible that we might have a solution for all sums
         push!(valid, i.target)
         continue
     end 
-    try_asterisk(i) && push!(valid, i.target)
+    try_asterisk(i) && push!(valid, i)
 end
 
-print("$valid, $(sum(valid))\n")
+
+print("Pt1 = $(mapreduce(x->x.target, +, valid))\n")
+
+# Pt2 
+
+function concat(x,y)
+    places = floor(Int128,log10(y)) + Int128(1)
+    x*10^places + y 
+end
+
+function try_ask_pipes(i)
+    max_ = length(i.elems) - 1
+    accum = 0
+    for p ∈ 1:max_
+        accum += i.elems[p]
+        #try asterisk positions - l to r, using memo to avoid recomputation
+        lhs_ask = accum * i.elems[p+1]
+        rhs = i.memo[p+2]
+
+        #lhs > i.target && return false #lhs already bigger than the answer - but if there's a terminal 1 (sigh) then we can still get a valid solution
+        lhs_ask + rhs == i.target && return true  #found a solution
+
+        if p < max_ ##can recurse [can't early return here because we could need to concat...] 
+            try_ask_pipes( item(i.target, [lhs_ask ; i.elems[p+2:end]], i.memo[p+1:end]) ) && return true
+        end
+
+        #try concat
+        lhs_pipe = concat(accum, i.elems[p+1])
+        lhs_pipe + rhs == i.target && return true  #found a solution
+
+        p == max_ && return false #can't recurse and out of options 
+        try_ask_pipes( item(i.target, [lhs_pipe ; i.elems[p+2:end]], i.memo[p+1:end]))
+
+    end
+    return false
+end
+
+
+#only test the ones we can't already solve!
+remaining = setdiff!(probs, valid)
+
+valid_2 = Set{Int128}()
+
+for i ∈ remaining
+    try_ask_pipes(i) && push!(valid_2, i.target)
+end
+
+print("Pt2 = $(valid_2)\n")
 
