@@ -11,7 +11,7 @@ struct item
 #    revmemo::Vector{Int64}
 end
 
-probs = Set(map(readlines("inputtest")) do l
+probs = Set(map(readlines("input")) do l
     s,p = split(l,':')
     p = parse.(Int128,collect(split.(p)))
     memo = reverse(cumsum(reverse(p))) #making use of commutivity of + = these are the sums for the *rhs* fragments, for a given position 
@@ -44,14 +44,15 @@ valid = Set{item}()
 for i ∈ probs
     #i.target < first(i.memo) && print("sum case: $i\n") #values that are just 1 in the sum *do* reduce the total when multiplied so we can't early exit here
     if i.target == first(i.memo) #possible that we might have a solution for all sums
-        push!(valid, i.target)
+        push!(valid, i)
         continue
     end 
     try_asterisk(i) && push!(valid, i)
 end
 
+pt1 = mapreduce(x->x.target, +, valid)
 
-print("Pt1 = $(mapreduce(x->x.target, +, valid))\n")
+print("Pt1 = $(pt1)\n")
 
 # Pt2 
 
@@ -81,7 +82,7 @@ function try_ask_pipes(i)
         lhs_pipe + rhs == i.target && return true  #found a solution
 
         p == max_ && return false #can't recurse and out of options 
-        try_ask_pipes( item(i.target, [lhs_pipe ; i.elems[p+2:end]], i.memo[p+1:end]))
+        try_ask_pipes( item(i.target, [lhs_pipe ; i.elems[p+2:end]], i.memo[p+1:end])) && return true
 
     end
     return false
@@ -91,11 +92,11 @@ end
 #only test the ones we can't already solve!
 remaining = setdiff!(probs, valid)
 
-valid_2 = Set{Int128}()
+valid_2 = Set{item}()
 
 for i ∈ remaining
-    try_ask_pipes(i) && push!(valid_2, i.target)
+    try_ask_pipes(i) && push!(valid_2, i)
 end
 
-print("Pt2 = $(valid_2)\n")
+print("Pt2 = $(mapreduce(x->x.target, +, valid_2)+pt1)\n")
 
