@@ -11,14 +11,13 @@ struct item
 #    revmemo::Vector{Int64}
 end
 
-probs = map(readlines("inputtest")) do l
+probs = map(readlines("input")) do l
     s,p = split(l,':')
     p = parse.(Int64,collect(split.(p)))
     memo = reverse(cumsum(reverse(p))) #making use of commutivity of + = these are the sums for the *rhs* fragments, for a given position 
     item(parse(Int64,s),p, [memo ; 0])
 end
 
-print("$probs")
 
 function try_asterisk(i, accum)
     max_ = length(i.elems) - 1
@@ -29,17 +28,21 @@ function try_asterisk(i, accum)
         rhs = i.memo[p+2]
         lhs + rhs == i.target && return true
         p == max_ && return false
-        try_asterisk( item(i.target, [lhs ; i.elems[p+2:end]], i.memo[p+2:end]), accum ) && return true
+        try_asterisk( item(i.target, [lhs ; i.elems[p+2:end]], i.memo[p+1:end]), accum ) && return true
         #recurse into subproblems for extra asterisks, where subproblem is (currentstate, [...rest of problem])
     end
     return false
 end
 
 valid = Vector{Int64}()
-for i ∈ probs 
+for i ∈ probs
     i.target < first(i.memo) && continue #if even the total sum > target, nothing else will get us an answer
-    try_asterisk(i, 1) && push!(valid, i.target)
+    if i.target == first(i.memo) 
+        push!(valid, i.target)
+        continue
+    end 
+    try_asterisk(i, 0) && push!(valid, i.target)
 end
 
-print("$valid, $(sum(valid))")
+print("$valid, $(sum(valid))\n")
 
