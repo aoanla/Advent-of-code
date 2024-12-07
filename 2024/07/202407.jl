@@ -73,15 +73,15 @@ function try_ask_pipes(i)
         #lhs > i.target && return false #lhs already bigger than the answer - but if there's a terminal 1 (sigh) then we can still get a valid solution
         lhs_ask + rhs == i.target && return true  #found a solution
 
-        if p < max_ ##can recurse [can't early return here because we could need to concat...] 
-            try_ask_pipes( item(i.target, [lhs_ask ; i.elems[p+2:end]], i.memo[p+1:end]) ) && return true
-        end
+
 
         #try concat
         lhs_pipe = concat(accum, i.elems[p+1])
         lhs_pipe + rhs == i.target && return true  #found a solution
 
         p == max_ && return false #can't recurse and out of options 
+
+        try_ask_pipes( item(i.target, [lhs_ask ; i.elems[p+2:end]], i.memo[p+1:end]) ) && return true
         try_ask_pipes( item(i.target, [lhs_pipe ; i.elems[p+2:end]], i.memo[p+1:end])) && return true
 
     end
