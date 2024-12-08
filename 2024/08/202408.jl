@@ -42,6 +42,10 @@ for (k,v) ∈ pairs(freq_locs)
             #divide through both spans, and take lowest value
 
             #  we do need to avoid double-counting - how do we find intersections of our lines? 
+            #  if we store a rational gradient g divs[2]//divs[1] , and v, a point on the line 
+            # then intersect (x) is at 
+            # (x2-x1)/(g1 - g2) , which is rational if (g1-g2) divies (x2-x2)
+            # (and we can also check y similarly)
         end
     end
 end
