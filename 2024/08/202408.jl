@@ -30,13 +30,13 @@ for (k,v) ∈ pairs(freq_locs)
     end
 end
 
-print("$(length(sites))")
+print("Pt1 = $(length(sites))\n")
 
 #pt2 is just doing some integer-division into the grid 
 for (k,v) ∈ pairs(freq_locs)
     for (i,vi) ∈ enumerate(v)
         for vii ∈ v[i+1:end]
-            dists = abs.(vi .- vii) #dist - which *could* be a multiple of the core divisors (if it's, say (6,3), then our line is actually (2,1))
+            dists = (vi .- vii) #dist - which *could* be a multiple of the core divisors (if it's, say (6,3), then our line is actually (2,1))
             divs = dists .÷ gcd(dists...)
             #assuming boundary is square, find coords on the line where we hit 1 or boundary
             #divide through both spans, and take lowest value
@@ -46,6 +46,25 @@ for (k,v) ∈ pairs(freq_locs)
             # then intersect (x) is at 
             # (x2-x1)/(g1 - g2) , which is rational if (g1-g2) divies (x2-x2)
             # (and we can also check y similarly)
+
+            #this might be slower than just adding to the set...
+
+            #"slow" adding to set solution
+            s1 = vi
+            while true 
+                ((s1 .> (0,0)) .&& (s1 .<= boundary)) == (true, true) || break 
+                push!(sites,s1) 
+                s1 = s1 .- divs 
+            end
+            s1 = vi
+            while true 
+                ((s1 .> (0,0)) .&& (s1 .<= boundary)) == (true, true) || break 
+                push!(sites,s1) 
+                s1 = s1 .+ divs 
+            end
         end
     end
 end
+
+
+print("\nPt2 = $(length(sites))\n")
