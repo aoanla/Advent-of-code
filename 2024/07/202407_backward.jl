@@ -32,6 +32,7 @@ function try_asterisk(i)
 
         # we *loop* by subtracting the next element from p!!!
         target -= divisor
+        target < 1 && return false
     end
     return false
 end
@@ -86,7 +87,9 @@ function try_ask_pipes(i)
         p == max_ && return false #can't recurse and out of options 
 
         # we *loop* by subtracting the next element from p!!!
+        #we should check if target is negative at this point
         target -= accum
+        target < 1 && return false
     end
     return false
 end
