@@ -33,3 +33,15 @@ end
 print("$(length(sites))")
 
 #pt2 is just doing some integer-division into the grid 
+for (k,v) ∈ pairs(freq_locs)
+    for (i,vi) ∈ enumerate(v)
+        for vii ∈ v[i+1:end]
+            dists = abs.(vi .- vii) #dist - which *could* be a multiple of the core divisors (if it's, say (6,3), then our line is actually (2,1))
+            divs = dists .÷ gcd(dists...)
+            #assuming boundary is square, find coords on the line where we hit 1 or boundary
+            #divide through both spans, and take lowest value
+
+            #  we do need to avoid double-counting - how do we find intersections of our lines? 
+        end
+    end
+end
