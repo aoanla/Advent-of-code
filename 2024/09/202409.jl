@@ -15,6 +15,7 @@ for empty_span ∈ empty_spans
         fs = take_last_file_span_on_disk
         if len(fs) <= len(empty_span)
             fs.start = empty_span.start 
+            #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update index of spans here (priority queue?)
             empty_span.start += len(fs)
             empty_span.len -= len(fs)
@@ -22,9 +23,12 @@ for empty_span ∈ empty_spans
             new_fs_span = fs_span(start+len(es), len(fs)-len(es))
             fs_span.start = empty_span.start
             fs_span.len = len(es)
+            #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update span index with new fs_span location and new_fs_span in general
         end
     end
+    #check for span merger between the final fs we moved and the *next* fs [which must be adjacent to us now]
+    # if fs.type == next_fs.type then replace with 1
 end
 
 #for file_span ∈ file_spans
