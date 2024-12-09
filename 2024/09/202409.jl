@@ -1,3 +1,5 @@
+#using DataStructures   #for SortedDict
+
 # just from looking at pt1, pt2 is clearly going to be a defragmentation task.
 # as such, pt1 has a trivial way to do it based on representing the map as an "unpacked"
 # set of items, but pt2 might be easier if we have a more sophisticated representation
@@ -9,39 +11,55 @@
 
 struct f_span 
     id::Int32
-    start::Int32
-    len::Int8 #in fact, this is a maximum of 9!
+    len::Int32 #in fact, this is a maximum of 9!
 end
 
 struct e_span
-    start::Int32 
     len::Int32 #this *could* be big, if we're taking from the end and making big spaces 
 end 
 
+zero_ = UInt8('0')
+
 #parse input 
-file_spans = Vec{f_span}()
-empty_spans = Vec{e_span}()
-read("inputtest") |> Fix2(partition,2) |>  enumerate |> Fix1((op,iter)->foldl(op,iter; 0), (n,(i,(f,e)))->begin
-    push!(file_spans, f_span(i,n,f))
-    push!(empty_spans, e_span(n+f, e))
-    n+f+e #next position
+file_spans = Dict{Int32,f_span}()
+empty_spans = Dict{Int32,Int32}()
+read("inputtest") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.partition,2) |>  enumerate |> Base.Fix1((op,iter)->foldl(op,iter; init=0), (n,(i,f))->begin
+
+    file_spans[n]=f_span(i-1,first(f))
+    if length(f) == 2
+        empty_spans[n+first(f)] = last(f)
+    end
+    n + sum(f) #next position
 end)
+#now we have span vectors, which should probably be priority queues
 
-
+print("$file_spans\n")
+print("$empty_spans\n")
 #pt 1 algo, using spans:
 
-for empty_span ∈ empty_spans
-    while len(empty_span)>0
-        fs = take_last_file_span_on_disk
-        if len(fs) <= len(empty_span)
+exit()
+
+poplast!(d::SortedDict{T,V}) where T,V = pop!(lastindex(d)) 
+
+empty_spans_keys = keys(empty_spans) |> sort 
+for start_empty ∈ empty_spans_keys
+    len = empty_spans[start_empty]
+    inverse_file_spans = keys(file_spans) |> (x-> sort(x; rev=true)) |> collect
+    for (idx,start_fs) ∈ enumerate(inverse_file_spans)
+        fs = file_spans[start_fs]
+        if fs.len <= len
             #create new empty span where fs is now
-            fs.start = empty_span.start 
+            empty_span[start_fs] = fs.len #this should do an empty span merger if possible (to right is easiest) 
+            new_start_fs = start_empty 
+            delete!(file_spans,start_fs) #remove file_span
+              
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update index of spans here (priority queue?)
-            empty_span.start += len(fs)
-            empty_span.len -= len(fs)
+            empty_span.start += fs.len
+            len -= len_fs
+            len == 0 && break 
         else #chop fs span in two
-            new_fs_span = fs_span(start, len(fs)-len(es)) #yes, we remove from the end, sigh
+            new_fs_span = fs_span(fs.id, fs.len-len) #yes, we remove from the end, sigh
             fs_span.start = empty_span.start
             fs_span.len = len(es)
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
@@ -56,6 +74,6 @@ end
     #total value is file_span_id * (sum of all positions in span)
     # sum_of_all_positions from start to start+len is (2*start + len - 1)*len / 2 [Gaussian sum]
 #    tot += 
-checksum = mapreduce(+, file_spans) do span
-    span.id*((2*span.start + span.len - 1)*span.len)÷2
+checksum = mapreduce(+, file_spans) do (start,span)
+    span.id*((2*start + span.len - 1)*span.len)÷2
 end
