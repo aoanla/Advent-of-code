@@ -7,6 +7,26 @@
 # each item is, initially, a single "span". In the worst case, we can represent an item as 9 spans
 # of length 1 each. (In the best case, we save 9x the space!)
 
+struct f_span 
+    id::Int32
+    start::Int32
+    len::Int8 #in fact, this is a maximum of 9!
+end
+
+struct e_span
+    start::Int32 
+    len::Int32 #this *could* be big, if we're taking from the end and making big spaces 
+end 
+
+#parse input 
+file_spans = Vec{f_span}()
+empty_spans = Vec{e_span}()
+read("inputtest") |> Fix2(partition,2) |>  enumerate |> Fix1((op,iter)->foldl(op,iter; 0), (n,(i,(f,e)))->begin
+    push!(file_spans, f_span(i,n,f))
+    push!(empty_spans, e_span(n+f, e))
+    n+f+e #next position
+end)
+
 
 #pt 1 algo, using spans:
 
@@ -21,9 +41,7 @@ for empty_span ∈ empty_spans
             empty_span.start += len(fs)
             empty_span.len -= len(fs)
         else #chop fs span in two
-            #urgh, this is wrong for the first part (it moves from the back not the front
-            #which is something we'd never do in a real defrag!)
-            new_fs_span = fs_span(start+len(es), len(fs)-len(es))
+            new_fs_span = fs_span(start, len(fs)-len(es)) #yes, we remove from the end, sigh
             fs_span.start = empty_span.start
             fs_span.len = len(es)
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
