@@ -20,6 +20,8 @@ for empty_span ∈ empty_spans
             empty_span.start += len(fs)
             empty_span.len -= len(fs)
         else #chop fs span in two
+            #urgh, this is wrong for the first part (it moves from the back not the front
+            #which is something we'd never do in a real defrag!)
             new_fs_span = fs_span(start+len(es), len(fs)-len(es))
             fs_span.start = empty_span.start
             fs_span.len = len(es)
