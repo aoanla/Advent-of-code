@@ -36,5 +36,5 @@ end
     # sum_of_all_positions from start to start+len is (2*start + len - 1)*len / 2 [Gaussian sum]
 #    tot += 
 checksum = mapreduce(+, file_spans) do span
-    ((2*span.start + span.len - 1)*span.len)÷2
+    span.id*((2*span.start + span.len - 1)*span.len)÷2
 end
