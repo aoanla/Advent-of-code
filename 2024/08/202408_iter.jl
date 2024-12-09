@@ -36,9 +36,11 @@ print("Pt1 = $(length(sites))\n")
 #δ == 0 -> Inf 
 #δ > 0 -> floor(boundary-x / δ) 
 #δ < 0 -> floor(x-1 / δ)
+selector = [1, first(boundary)]
+
 limit(δ,x) = begin
     δ == 0 && return first(boundary) #so big we won't pick it
-    dist = δ > 0 ? first(boundary) - x : 1-x
+    dist = selector[Int(δ>0)+1] -x 
     dist÷δ 
 end
 
