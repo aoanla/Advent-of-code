@@ -50,12 +50,20 @@ for start_empty ∈ empty_spans_keys
         if fs.len <= len
             #create new empty span where fs is now
             empty_span[start_fs] = fs.len #this should do an empty span merger if possible (to right is easiest) 
+            
             new_start_fs = start_empty 
+            start_empty += fs.len #update our empty span here because we might overwrite fs later 
+
             delete!(file_spans,start_fs) #remove file_span
-              
+            #check for merge
+            nxt = last_thing_we_mvd
+            if start + file_spans[nxt].len == new_start_fs && file_spans[nxt].id == fs.id
+                #merge
+            end 
+
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update index of spans here (priority queue?)
-            empty_span.start += fs.len
+            
             len -= len_fs
             len == 0 && break 
         else #chop fs span in two
@@ -67,7 +75,8 @@ for start_empty ∈ empty_spans_keys
         end
     end
     #check for span merger between the final fs we moved and the *next* fs [which must be adjacent to us now]
-    # if fs.type == next_fs.type then replace with 1
+    nxt = last_fs_start + last_fs_len
+    has_key(file_spans, nxt) && file_spans[nxt].id = last_fs_id && #merge right 
 end
 
 #for file_span ∈ file_spans
