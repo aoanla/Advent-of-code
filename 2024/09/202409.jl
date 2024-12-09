@@ -14,6 +14,7 @@ for empty_span ∈ empty_spans
     while len(empty_span)>0
         fs = take_last_file_span_on_disk
         if len(fs) <= len(empty_span)
+            #create new empty span where fs is now
             fs.start = empty_span.start 
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update index of spans here (priority queue?)
