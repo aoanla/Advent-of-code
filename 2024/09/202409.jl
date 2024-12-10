@@ -24,7 +24,6 @@ zero_ = UInt8('0')
 file_spans = Dict{Int32,f_span}()
 empty_spans = Dict{Int32,Int32}()
 read("inputtest") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.partition,2) |>  enumerate |> Base.Fix1((op,iter)->foldl(op,iter; init=0), (n,(i,f))->begin
-
     file_spans[n]=f_span(i-1,first(f))
     if length(f) == 2
         empty_spans[n+first(f)] = last(f)
@@ -43,9 +42,10 @@ print("$empty_spans\n")
 
 empty_spans_keys = keys(empty_spans) |> collect |> sort! 
 for start_empty ∈ empty_spans_keys
+    print("filling $start_empty\n")
     len = empty_spans[start_empty]
     tmp = start_empty
-    inverse_file_spans = keys(file_spans) |> collect |> (x-> sort!(x; rev=true)) 
+    inverse_file_spans = keys(file_spans) |> collect |> (x-> sort!(x; rev=true)) |> Base.Fix1(filter, >(start_empty))
     for (idx,start_fs) ∈ enumerate(inverse_file_spans)
         fs = file_spans[start_fs]
         if fs.len <= len
@@ -96,10 +96,11 @@ end
     #total value is file_span_id * (sum of all positions in span)
     # sum_of_all_positions from start to start+len is (2*start + len - 1)*len / 2 [Gaussian sum]
 #    tot += 
-checksum = mapreduce(+, file_spans) do (start,span)
-    print("Sum: starting at $(start) to $(start+span.len-1), mul by $(span.id)... ")
+checksum = mapreduce(+, keys(file_spans) ) do start
+    span = file_spans[start]
+    #print("Sum: starting at $(start) to $(start+span.len-1), mul by $(span.id)... ")
     res = span.id*((2*start + span.len - 1)*span.len)÷2
-    print("$res \n")
+    #print("$res \n")
     res
 end
 
