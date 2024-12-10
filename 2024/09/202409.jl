@@ -106,3 +106,10 @@ checksum = mapreduce(+, keys(file_spans) ) do start
 end
 
 print("$checksum")
+
+##okay, so I overestimated the complexity of pt2 from looking at pt1
+# this is just iterating over my reverse_order_file_spans list, finding the 
+# left-most space big enough to hold it
+# it might be reasonable to maintain a max_empty_span var on parsing the list
+# so we can early-reject moving a span if no empty spans can take it. 
+# (we could also maintain a dict of vectors of empty_spans keyed by size too)
