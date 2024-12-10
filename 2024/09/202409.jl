@@ -23,7 +23,7 @@ zero_ = UInt8('0')
 #parse input 
 file_spans = Dict{Int32,f_span}()
 empty_spans = Dict{Int32,Int32}()
-read("inputtest") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.partition,2) |>  enumerate |> Base.Fix1((op,iter)->foldl(op,iter; init=0), (n,(i,f))->begin
+read("input") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.partition,2) |>  enumerate |> Base.Fix1((op,iter)->foldl(op,iter; init=0), (n,(i,f))->begin
     file_spans[n]=f_span(i-1,first(f))
     if length(f) == 2
         empty_spans[n+first(f)] = last(f)
@@ -32,8 +32,8 @@ read("inputtest") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.part
 end)
 #now we have span vectors, which should probably be priority queues
 
-print("$file_spans\n")
-print("$empty_spans\n")
+#print("$file_spans\n")
+#print("$empty_spans\n")
 #pt 1 algo, using spans:
 
 #exit()
@@ -42,10 +42,11 @@ print("$empty_spans\n")
 
 empty_spans_keys = keys(empty_spans) |> collect |> sort! 
 for start_empty ∈ empty_spans_keys
-    print("filling $start_empty\n")
+    #print("filling $start_empty\n")
     len = empty_spans[start_empty]
+    len == 0 && continue 
     tmp = start_empty
-    inverse_file_spans = keys(file_spans) |> collect |> (x-> sort!(x; rev=true)) |> Base.Fix1(filter, >(start_empty))
+    inverse_file_spans = keys(file_spans) |> collect |> (x-> sort!(x; rev=true)) |> Base.Fix1(filter, >=(start_empty))
     for (idx,start_fs) ∈ enumerate(inverse_file_spans)
         fs = file_spans[start_fs]
         if fs.len <= len
