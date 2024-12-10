@@ -37,52 +37,70 @@ print("$file_spans\n")
 print("$empty_spans\n")
 #pt 1 algo, using spans:
 
-exit()
+#exit()
 
-poplast!(d::SortedDict{T,V}) where T,V = pop!(lastindex(d)) 
+#poplast!(d::SortedDict{T,V}) where T,V = pop!(lastindex(d)) 
 
-empty_spans_keys = keys(empty_spans) |> sort 
+empty_spans_keys = keys(empty_spans) |> collect |> sort! 
 for start_empty ∈ empty_spans_keys
     len = empty_spans[start_empty]
-    inverse_file_spans = keys(file_spans) |> (x-> sort(x; rev=true)) |> collect
+    tmp = start_empty
+    inverse_file_spans = keys(file_spans) |> collect |> (x-> sort!(x; rev=true)) 
     for (idx,start_fs) ∈ enumerate(inverse_file_spans)
         fs = file_spans[start_fs]
         if fs.len <= len
             #create new empty span where fs is now
-            empty_span[start_fs] = fs.len #this should do an empty span merger if possible (to right is easiest) 
+            empty_spans[start_fs] = fs.len #this should do an empty span merger if possible (to right is easiest) 
             
             new_start_fs = start_empty 
             start_empty += fs.len #update our empty span here because we might overwrite fs later 
 
             delete!(file_spans,start_fs) #remove file_span
-            #check for merge
-            nxt = last_thing_we_mvd
-            if start + file_spans[nxt].len == new_start_fs && file_spans[nxt].id == fs.id
+            
+            #STUFF FOR PT2
+            #check for merge not 
+            #nxt = last_thing_we_mvd
+            #if start + file_spans[nxt].len == new_start_fs && file_spans[nxt].id == fs.id
                 #merge
-            end 
-
+            #end 
+            file_spans[new_start_fs] = fs #and move to new location
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
             #update index of spans here (priority queue?)
-            
-            len -= len_fs
+            #/STUFF FOR PT2
+            len -= fs.len
             len == 0 && break 
         else #chop fs span in two
-            new_fs_span = fs_span(fs.id, fs.len-len) #yes, we remove from the end, sigh
-            fs_span.start = empty_span.start
-            fs_span.len = len(es)
+            rem_f_span = f_span(fs.id, fs.len-len) #yes, we remove from the end, sigh
+            empty_spans[start_fs+rem_f_span.len] = len #make our new empty space 
+            file_spans[start_empty] = f_span(fs.id, len) #fill empty span
+            file_spans[start_fs] = rem_f_span #this is what's left
+            #STUFF FOR PT2
             #check for span merger (if fs.type == previous_fs.type then replace with 1)
+            #STUFF FOR PT2
+
             #update span index with new fs_span location and new_fs_span in general
+            break #no more need to iterate file spans
         end
+        
     end
+    delete!(empty_spans,tmp)
+    #STUFF FOR PT2
     #check for span merger between the final fs we moved and the *next* fs [which must be adjacent to us now]
-    nxt = last_fs_start + last_fs_len
-    has_key(file_spans, nxt) && file_spans[nxt].id = last_fs_id && #merge right 
+    #nxt = last_fs_start + last_fs_len
+    #has_key(file_spans, nxt) && file_spans[nxt].id = last_fs_id && #merge right 
+    #/STUFF FOR PT2
 end
 
+#keys(file_spans) |> collect |> sort! |> Base.Fix1(foreach, x->print("P$x - id: $(file_spans[x].id) len: $(file_spans[x].len)\n"))
 #for file_span ∈ file_spans
     #total value is file_span_id * (sum of all positions in span)
     # sum_of_all_positions from start to start+len is (2*start + len - 1)*len / 2 [Gaussian sum]
 #    tot += 
 checksum = mapreduce(+, file_spans) do (start,span)
-    span.id*((2*start + span.len - 1)*span.len)÷2
+    print("Sum: starting at $(start) to $(start+span.len-1), mul by $(span.id)... ")
+    res = span.id*((2*start + span.len - 1)*span.len)÷2
+    print("$res \n")
+    res
 end
+
+print("$checksum")
