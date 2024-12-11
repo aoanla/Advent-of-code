@@ -132,7 +132,7 @@ for fs_posn ∈ keys(file_spans_) |> collect |> (x-> sort!(x; rev=true))
     fs = file_spans_[fs_posn]
     #each span gets tried against the stuff available when it is checked.
     fs.len > max_empty_len && continue #early exit if we never had a gap large enough
-    (empty_posn,empty_len) = findmin(peekfirst.(empty_span_queues[begin:fs.len]))
+    (empty_posn,empty_len) = findmin(peekfirst.(empty_span_queues[fs.len:end]))
     best_empty_idx == -1  && continue #or however we indicate no valid thing found 
     popfirst!(empty_span_queues[empty_len]) #removes it for us
 
