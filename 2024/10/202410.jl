@@ -10,8 +10,8 @@ grid = [empty ;; g ;; empty ] #top & bottom padding
 
 #now it's safe to traverse the grid with no bounds checking as we have buffer 
 
-trailheads = Dict{Tuple{Int32, Int32}, Int32}
-directions = ((0,1),(0,-1),(1,0),(-1,0))
+trailheads = Dict{Tuple{Int64, Int64}, Int64}()
+const directions = ((0,1),(0,-1),(1,0),(-1,0))
 
 function explore(loc, cur, tmp_scratch, zero_coord)
     trailheads = 0
@@ -30,13 +30,19 @@ function explore(loc, cur, tmp_scratch, zero_coord)
     trailheads
 end
 
+zero_(x) = x == 0
 
-zero_coord = CartesianIndex(1,1)
-while !(zero_coord_ = findnext(x->x==0, grid, zero_coord)).isnothing()
-    zero_coord_ = Tuple(zero_coord) #needed for math to work
-    tmp_scratch = fill(true, (19,19) ) #"visited" counter to avoid backtracking, centred on spot 
-    trailheads[zero_coord]= explore(zero_coord, 0, tmp_scratch, zero_coord)
+function get_trailheads(grid, trailheads)
+    zero_coord = findfirst(zero_, grid) 
+    while !isnothing(zero_coord)
+        zero_coord_ = Tuple(zero_coord) #needed for math to work
+        tmp_scratch = fill(true, (19,19) ) #"visited" counter to avoid backtracking, centred on spot 
+        trailheads[zero_coord_]= explore(zero_coord_, 0, tmp_scratch, zero_coord_)
+        zero_coord = findnext(zero_, grid, CartesianIndex(zero_coord_ .+ (1,0)))
+    end
 end
+
+get_trailheads(grid, trailheads)
 
 #I think this is what pt1 wants
 print("$(sum(values(trailheads)))")
