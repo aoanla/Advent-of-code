@@ -14,55 +14,53 @@ integer_log10(x::Int64) = begin
 
 #we of course could implement an 128bit version if we needed to
 
+#see discussion at end: we probably gain a lot by *counting* populations of stones of each number
+#as we'll have *loads* of 0,2,4,8 etc stones by the end.
 
-#stones are most efficiently in a linked list
-#but I guess we could make a counting-queue version
+#this also means that a dictionary is the best storage, since we don't *actually* need to worry about
+#the "order preservation" that Eric tells us about as a red-herring. (stones never merge so who cares)
 
-
-function step!(stones, n)
-    oldn = n
-    for _ ∈ 1:oldn
-        stone = dequeue!(stones)
-        if stone == 0
-            enqueue!(stones, 1)
-        else
-            stonedigits = integer_log10(stone)
-            if iseven(stonedigits)
-                cutoff = 10^(stonedigits÷2)
-                enqueue!(stones, stone ÷ cutoff)
-                enqueue!(stones, stone % cutoff)
-                 #such that we skip it this time...
-                n+=1 
-            else 
-                enqueue!(stones, stone * 2024) #I don't think any of the cycles can make this > 2^63...
-            end
+function newstone(stone)
+    if stone == 0
+        [1]
+    else
+        stonedigits = integer_log10(stone)
+        if iseven(stonedigits)
+            cutoff = 10^(stonedigits÷2)
+            [stone ÷ cutoff,stone % cutoff]
+        else 
+            [stone * 2024]
         end
     end
-    n
+end
+
+function step(stones)
+    newdict = Dict{Int64, Int64}
+    for (k,v) ∈ pairs(stones)
+        for kk ∈ newstones(k)
+            newdict[kk]+=get(newdict,kk,0)
+        end 
+    end 
+    newdict
 end 
 
-stones = Queue{Int64}()
-parse.(Int64, split(readline("input")," ")) |> Base.Fix1(foreach, x->enqueue!(stones, x) )
+stones = Dict{Int64,Int64}()
+parse.(Int64, split(readline("input")," ")) |> Base.Fix1(foreach, x->stones[x]=1 )
 
 
-n = length(stones)
-orig = n
 for i ∈ 1:25 
-    oldn = n
-    global n = step!(stones, n)
-    print("$(i): $n $(n/oldn)\n")
+    global stones = step(stones)
 end
-twentyfive = n
-print("Pt1: $n $(n/orig)\n")
+pt1 = mapreduce((k,v)->k*v, +, stones)
+print("Pt1: $pt1\n")
 
 #50 more steps - becomes too big for memory, so we clearly have to extrapolate instead?
-for i ∈ 1:10
-    oldn = n
-    global n = step!(stones, n)
-    print("$(25+i): $n $(n/oldn) - extrapolate = $(twentyfive * 1.5183306^10)\n")
+for i ∈ 1:50
+    global stones = step(stones)
 end
+pt2 = mapreduce((k,v)->k*v, +, stones)
+print("Pt2: $pt2\n")
 
-print("35/1: $(n/orig)\n")
 #geometric mean is ~1.5 - I think it's actually going to be 2 - (1/2.024) because
 # if our multiplier was 1000, *all* odd-digit numbers would be even-digit next (and thus split)
 # but here 1/2.024 of them will instead carry and get an extra digit.
