@@ -35,10 +35,10 @@ function newstone(stone)
 end
 
 function step(stones)
-    newdict = Dict{Int64, Int64}
+    newdict = Dict{Int64, Int64}()
     for (k,v) ∈ pairs(stones)
-        for kk ∈ newstones(k)
-            newdict[kk]+=get(newdict,kk,0)
+        for kk ∈ newstone(k)
+            newdict[kk]=get(newdict,kk,0)+v
         end 
     end 
     newdict
@@ -51,14 +51,14 @@ parse.(Int64, split(readline("input")," ")) |> Base.Fix1(foreach, x->stones[x]=1
 for i ∈ 1:25 
     global stones = step(stones)
 end
-pt1 = mapreduce((k,v)->k*v, +, stones)
+pt1 = sum(values(stones))
 print("Pt1: $pt1\n")
 
 #50 more steps - becomes too big for memory, so we clearly have to extrapolate instead?
 for i ∈ 1:50
     global stones = step(stones)
 end
-pt2 = mapreduce((k,v)->k*v, +, stones)
+pt2 = sum(values(stones))
 print("Pt2: $pt2\n")
 
 #geometric mean is ~1.5 - I think it's actually going to be 2 - (1/2.024) because
