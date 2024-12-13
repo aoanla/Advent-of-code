@@ -19,7 +19,7 @@ function rat_matinv(A::Matrix{Int64})
 end 
 
 
-function value(problem)
+function value(problem::problem)
     if det(problem.A) == 0
         #print("No solution: $problem\n")
         0
