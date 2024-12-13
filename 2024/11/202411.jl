@@ -46,14 +46,33 @@ parse.(Int64, split(readline("input")," ")) |> Base.Fix1(foreach, x->enqueue!(st
 
 
 n = length(stones)
+orig = n
 for i ∈ 1:25 
+    oldn = n
     global n = step!(stones, n)
+    print("$(i): $n $(n/oldn)\n")
 end
-
-print("Pt1: $n\n")
+twentyfive = n
+print("Pt1: $n $(n/orig)\n")
 
 #50 more steps - becomes too big for memory, so we clearly have to extrapolate instead?
-for i ∈ 1:50
+for i ∈ 1:10
+    oldn = n
     global n = step!(stones, n)
+    print("$(25+i): $n $(n/oldn) - extrapolate = $(twentyfive * 1.5183306^10)\n")
 end
-print("Pt2: $n\n")
+
+print("35/1: $(n/orig)\n")
+#geometric mean is ~1.5 - I think it's actually going to be 2 - (1/2.024) because
+# if our multiplier was 1000, *all* odd-digit numbers would be even-digit next (and thus split)
+# but here 1/2.024 of them will instead carry and get an extra digit.
+
+#in any case, I think this *would* eventually work, in the limit, but isn't going to give us an
+#exact answer that the question wants.
+
+#thinking about the pattern of loops when you ×2024, it seems that a lot of numbers will
+#eventually produce 0 (which then has a loop of 0->1->2024->[2,0,2,4]) producing lots of 
+#0s, 2s, 4s (and other single digits)
+#So *most* of the stones are going to be many [0-9] stones, all of which follow the same loop
+#for a given timestep. It would be more efficient to just count populations and transform
+#them that way
