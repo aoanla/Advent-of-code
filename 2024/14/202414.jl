@@ -42,10 +42,18 @@ print("Pt1 = $(pt1(100))\n")
 # the product of all the quads is maximised by an equal distribution (that is, if N total, max(a*b*c*(N-a-b-c)) is when a=b=c=N/4 -> N^4/256) if N >> 4
 # and minimised by an unequal distribution with all in one quad (as that's zero) or a few in 3 and most in one (~N)
 
+#so, this *doesn't find* the right answer. Maybe we need a more precise measure of clustering, like the variance of the coordinates?
+
+
+
 function pt2()
-    d = Dict([n=>pt1(n) for n ∈ 1:prod(lims)])
-    k_ordered = sort(collect(keys(d)); by=x->d[x])
-    k_ordered[1:1000]
+    vars = map(1:lims[1]*lims[2]) do k
+        pts_ = map(r->pt(r,k), robots)
+        mean = reduce(.+, pts_)
+        meansq = mapreduce(x->x.^2, .+, pts_)
+        sum(meansq .- mean.^2)
+    end 
+    sort([i for i ∈ 1:lims[1]*lims[2]]; by=x->vars[x])
 end
 
 wait_for_key(prompt) = (print(stdout, prompt); read(stdin, 1); nothing)
@@ -54,7 +62,7 @@ wait_for_key(prompt) = (print(stdout, prompt); read(stdin, 1); nothing)
 for k ∈ pt2()
     pts = map(r->pt(r,k), robots)
     print("n = $k\n")
-    p = scatterplot(first.(pts), last.(pts))
+    p = scatterplot(first.(pts), last.(pts); xlim=(0,101), ylim=(0,103))
     display(p)
     print("****************************\n")
     wait_for_key("next?")
