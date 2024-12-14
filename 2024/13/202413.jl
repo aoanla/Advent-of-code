@@ -62,3 +62,28 @@ end
 pt2 = mapreduce(value,.+, problems2)
 
 print("Pt2: $pt2\n")
+
+#the question is, does the \ operator, which I was just reminded of, solve this correctly? (It should be faster if it does.)
+
+function value_bs(problem::problem)
+    if det(problem.A) == 0
+        #print("No solution: $problem\n")
+        0
+    else 
+        #print("Solving: $problem\n")
+        candidate = problem.A\problem.B
+        if isinteger.(candidate) == [true ; true]
+            #print("\tInteger solns, accepted: $candidate\n")
+            candidate⋅cost
+        else
+            #print("\tNon-integral solns, rejected: $candidate\n")
+            0
+        end
+    end
+end
+
+pt2_bs = mapreduce(value,.+, problems2)
+
+print("Pt2bs: $pt2_bs\n")
+
+##It does!
