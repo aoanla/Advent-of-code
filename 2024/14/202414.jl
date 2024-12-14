@@ -2,18 +2,21 @@
 
 parser = r"p=([-]?\d+),([-]?\d+) v=([-]?\d+),([-]?\d+)"
 
-robots = readlines("inputtest") |> Base.Fix1(map, x->parse.(Int64,match(parser, x).captures)) 
+robots = readlines("input") |> Base.Fix1(map, x->parse.(Int64,match(parser, x).captures)) 
 
-testlims = (11,7)
-reallims = (101,103)
+#lims = (11,7)
+const lims = (101,103)
+const hlims = lims .÷ 2
 
 quads = Dict([[x,y]=>0 for x ∈ (true,false), y ∈ (true, false)])
 pt1posns = map(robots) do r
-    lims = testlims 
+    #lims = testlims 
     p = mod.((r[1:2] .+ (r[3:4].*100)), lims) 
-    p == lims .÷ 2 && return 
-    quads[p .< (lims.÷2)] += 1 
+    any(p .== hlims) && return 
+    quads[p .< hlims] += 1 
 end
 
 
-print("$(values(quads)) -> $(reduce(*, values(quads)))")
+print("Pt1 = $(reduce(*, values(quads)))\n")
+
+#pt2 is one of those stupid pointless questions that needs you to look at the input to work out what precisely it means by "Christmas Tree" shape.
