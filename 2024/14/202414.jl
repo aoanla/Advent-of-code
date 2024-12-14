@@ -1,4 +1,5 @@
 #isn't this just modulo arithmetic (possibly with a prime-factors twist, given the space boundaries are all prime)
+using UnicodePlots
 
 parser = r"p=([-]?\d+),([-]?\d+) v=([-]?\d+),([-]?\d+)"
 
@@ -8,12 +9,13 @@ robots = readlines("input") |> Base.Fix1(map, x->parse.(Int64,match(parser, x).c
 const lims = (101,103)
 const hlims = lims .÷ 2
 
+pt(r, n) = mod.((r[1:2] .+ (r[3:4].*n)), lims)
 
 function pt1(n)
     quads = Dict([[x,y]=>0 for x ∈ (true,false), y ∈ (true, false)]) 
     map(robots) do r
         #lims = testlims 
-        p = mod.((r[1:2] .+ (r[3:4].*n)), lims) 
+        p = pt(r,n)
         any(p .== hlims) && return 
         quads[p .< hlims] += 1 
     end
@@ -41,17 +43,23 @@ print("Pt1 = $(pt1(100))\n")
 # and minimised by an unequal distribution with all in one quad (as that's zero) or a few in 3 and most in one (~N)
 
 function pt2()
-    minn = 0
-    minval = 10000000000000
-    for n ∈ 1:prod(lims)
-        val = pt1(n)
-        if val < minval
-            minn = n 
-            minval =val
-        end 
-    end
-    minn
+    d = Dict([n=>pt1(n) for n ∈ 1:prod(lims)])
+    k_ordered = sort(collect(keys(d)); by=x->d[x])
+    k_ordered[1:1000]
 end
 
-print("Pt2: $(pt2())\n")
+wait_for_key(prompt) = (print(stdout, prompt); read(stdin, 1); nothing)
+
+
+for k ∈ pt2()
+    pts = map(r->pt(r,k), robots)
+    print("n = $k\n")
+    p = scatterplot(first.(pts), last.(pts))
+    display(p)
+    print("****************************\n")
+    wait_for_key("next?")
+
+end
+
+#rint("Pt2: $(pt2())\n")
 
