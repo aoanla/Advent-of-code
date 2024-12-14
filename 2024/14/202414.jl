@@ -69,5 +69,10 @@ for k ∈ pt2()
 
 end
 
+#notes - as far as I can tell, this value was also found by the quadrant sorting, but the actual issue was not setting my plot limits in Unicode plots 
+#which meant that the image was compressed in a way that made it hard to id as a tree.
+
+#(It's also not the "least variance" or "lowest safety score" plot so just picking the best value wouldn't have worked.)
+
 #rint("Pt2: $(pt2())\n")
 
