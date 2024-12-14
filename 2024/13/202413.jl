@@ -5,14 +5,14 @@ using Base.Iterators
 # no soln if det(A) == 0, else soln = A⁻¹B and sum is soln⋅cost 
 
 struct problem
-    A::Matrix{Int64}
-    B::Vector{Int64}
+    A::Matrix{Rational{Int64}}
+    B::Vector{Rational{Int64}}
 end
 
 const cost = (3,1)
 
 #rational matrix inverse 
-function rat_matinv(A::Matrix{Int64})
+function rat_matinv(A::Matrix{Rational{Int64}})
     det = A[1,1]*A[2,2] - A[1,2]*A[2,1]
     cofactors = [A[2,2] -A[1,2] ; -A[2,1] A[1,1]] #transposed matrix of cofactors 
     cofactors .// det 
@@ -82,7 +82,7 @@ function value_bs(problem::problem)
     end
 end
 
-pt2_bs = mapreduce(value,.+, problems2)
+pt2_bs = mapreduce(value_bs,.+, problems2)
 
 print("Pt2bs: $pt2_bs\n")
 
