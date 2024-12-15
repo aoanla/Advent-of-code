@@ -68,7 +68,7 @@ function parse_input(input)
     (grid, moves)
 end
 
-(origgrid, moves) = parse_input("inputtest")
+(origgrid, moves) = parse_input("input")
 
 grid = deepcopy(origgrid)
 start = Tuple(findfirst(==('@'), grid))
@@ -93,7 +93,8 @@ pt1 = mapreduce(x->100*(x[1]-1)+(x[2]-1), + , boxes)
 
 print("Final grid: \n")
 for l ∈ eachrow(grid)
-    print("$l\n")
+    print(reduce(*, l))
+    print("\n")
 end
 print("Pt1: $pt1\n")
 
@@ -118,38 +119,47 @@ function test_sqs(loc, grid)
     test_sq
 end
 
+
+move_type = Union{Set{Tuple{Int64, Int64}}, Nothing}
+
 function try_m2(loc, dir, grid)
     #horizontal pushes are unchanged for wide things 
     dir[1] == 0 && return try_m(loc, dir, grid)
     
     test_sq = test_sqs(loc, grid)
 
-    cand_sq = map(x->x.+dir, test_sq)
-    res = try_m2_wide(cand_sq, dir, grid)
+    move_dict = try_m2_wide(test_sq, dir, grid, 1)
     #print("Result of try_m2_wide on $cand_sq is $res\n")
-    if res
-        move_wide_m2(loc, dir, grid)
-        return true 
+    isnothing(move_dict) && return false
+    for i ∈ move_dict[2]:-1:1
+        for cell ∈ move_dict[1][i]
+            grid[(cell.+dir)...] = grid[cell...]
+            grid[cell...] = '.'
+        end
     end 
-    false 
+    true 
 end
 
-function try_m2_wide(cand_sq, dir, grid)
-    any(map(x->grid[x...]=='#', cand_sq)) && return false #can't move into a wall 
-    all(map(x->grid[x...]=='.', cand_sq)) && return true #neither side blocked
-    return all(map(sq->try_m2(sq, dir, grid), cand_sq))
-end 
 
-#call with a vector of moving items - this would better be done by just appending a list of items (by row) to push in our try_m2_wide function
-function move_wide_m2(loc, dir, grid)
-    locs = test_sqs(loc, grid)   #ensure we move as one for wide items
-    foreach(locs) do sq
-        dest = sq.+dir
-        grid[dest...] != '.' && move_wide_m2(dest, dir, grid)
-        grid[dest...] = grid[sq...]
-        grid[sq...] = '.'
+function try_m2_wide(test_sq, dir, grid, n)
+    cand_sq = map(x->x.+dir, test_sq)
+    any(map(x->grid[x...]=='#', cand_sq)) && return nothing #can't move into a wall 
+    all(map(x->grid[x...]=='.', cand_sq)) && return (Dict([n=>Set(test_sq)]),n) #neither side blocked, but neither side needs to move anything
+
+    #otherwise we're going to need to return some stuff to move ahead of us, accumulating recursively. I guess we could preallocate a vector of length "height of room"....
+    move_dict = Dict([n=>Set(test_sq)])
+    max_n = n
+    for sq ∈ cand_sq
+        grid[sq...] == '.' && continue #can't push an empty dot
+        res = try_m2_wide(test_sqs(sq,grid), dir, grid, n+1)
+        isnothing(res) && return nothing #nothings propagate and override
+        max_n = max(max_n, res[2])
+        for k ∈ keys(res[1])
+            move_dict[k] = get(move_dict,k, Set()) ∪ res[1][k]
+        end
     end
-end
+    (move_dict, max_n)
+end 
 
 function solve2(start, grid, moves)
     robot = start
@@ -172,7 +182,8 @@ pt2 = mapreduce(x->100*(x[1]-1)+(x[2]-1), + , boxes)
 
 print("Final grid: \n")
 for l ∈ eachrow(grid2)
-    print("$l\n")
+    print(reduce(*, l))
+    print("\n")
 end
 
-print("Pt2: $pt2\n")
+print("\nPt2: $pt2\n")
