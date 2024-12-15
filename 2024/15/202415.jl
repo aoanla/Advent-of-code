@@ -68,7 +68,7 @@ function parse_input(input)
     (grid, moves)
 end
 
-(origgrid, moves) = parse_input("inputtest3")
+(origgrid, moves) = parse_input("inputtest")
 
 grid = deepcopy(origgrid)
 start = Tuple(findfirst(==('@'), grid))
@@ -112,7 +112,7 @@ function test_sqs(loc, grid)
     
     if grid[loc...] == '[' #then also consider obstructions on the right cell
         push!(test_sq, loc.+(0,1))
-    else grid[loc...] == ']' #then also consider obstructions on the left cell
+    elseif grid[loc...] == ']' #then also consider obstructions on the left cell
         push!(test_sq, loc.+(0,-1))
     end 
     test_sq
@@ -120,13 +120,15 @@ end
 
 function try_m2(loc, dir, grid)
     #horizontal pushes are unchanged for wide things 
-    dir[2] == 0 && return try_m(loc, dir, grid)
-
+    dir[1] == 0 && return try_m(loc, dir, grid)
+    
     test_sq = test_sqs(loc, grid)
 
     cand_sq = map(x->x.+dir, test_sq)
-    if try_m2_wide(cand_sq, dir, grid)
-        move_wide_m2(test_sq, dir, grid)
+    res = try_m2_wide(cand_sq, dir, grid)
+    #print("Result of try_m2_wide on $cand_sq is $res\n")
+    if res
+        move_wide_m2(loc, dir, grid)
         return true 
     end 
     false 
@@ -138,11 +140,12 @@ function try_m2_wide(cand_sq, dir, grid)
     return all(map(sq->try_m2(sq, dir, grid), cand_sq))
 end 
 
-#call with a vector of moving items
-function move_wide_m2(locs, dir, grid)
+#call with a vector of moving items - this would better be done by just appending a list of items (by row) to push in our try_m2_wide function
+function move_wide_m2(loc, dir, grid)
+    locs = test_sqs(loc, grid)   #ensure we move as one for wide items
     foreach(locs) do sq
         dest = sq.+dir
-        grid[dest...] != '.' && move_m2(dest, dir, grid)
+        grid[dest...] != '.' && move_wide_m2(dest, dir, grid)
         grid[dest...] = grid[sq...]
         grid[sq...] = '.'
     end
@@ -151,18 +154,18 @@ end
 function solve2(start, grid, moves)
     robot = start
     for m ∈ moves
-        print("candidate cell $(robot.+m), ($(grid[(robot.+m)...]))\n")
+        #print("candidate cell $(robot.+m), ($(grid[(robot.+m)...]))\n")
         robot = try_m2(robot, m, grid) ? robot.+m : robot 
-        print("New state\n")
-        for l ∈ eachrow(grid)
-            print("$l\n")
-        end
-        print("\n\n")
+        #print("New state\n")
+        #for l ∈ eachrow(grid)
+        #    print("$l\n")
+        #end
+        #print("\n\n")
     end
 end
 
-
-solve2(start, grid2, moves)
+start2 = Tuple(findfirst(==('@'), grid2))
+solve2(start2, grid2, moves)
 
 boxes = Tuple.(findall(==('['), grid2))
 pt2 = mapreduce(x->100*(x[1]-1)+(x[2]-1), + , boxes)
