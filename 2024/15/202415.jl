@@ -68,8 +68,9 @@ function parse_input(input)
     (grid, moves)
 end
 
-(grid, moves) = parse_input("input")
+(origgrid, moves) = parse_input("input")
 
+grid = deepcopy(origgrid)
 start = Tuple(findfirst(==('@'), grid))
 
 function pt1_solve(start, grid, moves)
@@ -96,4 +97,29 @@ for l ∈ eachrow(grid)
 end
 print("Pt1: $pt1\n")
 
+#pt 2 is a transform of the matrix ('#' -> '#', '#'; 'O' -> '[', ']'; '.' -> '.', '.' ; '@' -> '@', '.')
+#and a change of rules ([] are one box - so push rules vertically propagate like a binary tree)
 
+function try_m2(loc, dir, grid)
+    grid[loc] == '[' #then also consider obstructions on the right cell [if push is > then this always pushes that cell]
+    grid[loc] == ']' #then also consider obstructions on the left cell [if push is < then this always pushes that cell]
+
+
+
+    cand = loc .+ dir
+
+    grid[cand...] == '#' && return false #can't move into a wall 
+    grid[cand...] == '.' && begin
+        grid[cand...] = grid[loc...]
+        grid[loc...] = '.'
+        return true
+    end 
+    #now we have a '0' which means recursion
+    if try_m(cand, dir, grid)
+        grid[cand...] = grid[loc...]
+        grid[loc...] = '.'
+        return true
+    else 
+        return false 
+    end
+end 
