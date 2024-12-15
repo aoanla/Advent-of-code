@@ -68,7 +68,7 @@ function parse_input(input)
     (grid, moves)
 end
 
-(origgrid, moves) = parse_input("input")
+(origgrid, moves) = parse_input("inputtest3")
 
 grid = deepcopy(origgrid)
 start = Tuple(findfirst(==('@'), grid))
@@ -100,55 +100,76 @@ print("Pt1: $pt1\n")
 #pt 2 is a transform of the matrix ('#' -> '#', '#'; 'O' -> '[', ']'; '.' -> '.', '.' ; '@' -> '@', '.')
 #and a change of rules ([] are one box - so push rules vertically propagate like a binary tree)
 
-expander = Dict(['#' => ['#','#'], 'O'=>['[',']'], '.' => ['.','.'], '@'=>['@','.']])
+expander = Dict(['#' => ['#' '#'], 'O'=>['[' ']'], '.' => ['.' '.'], '@'=>['@' '.']])
 grid2 = mapreduce(vcat, eachrow(origgrid)) do r
     mapreduce(x->expander[x], hcat, r)
 end
 
-function try_m2(loc, dir, grid)
+function test_sqs(loc, grid)
+    #handle non-wide robot here - no "extra" 
+    test_sq = [loc]
+    #push is vertical, object is wide
+    
+    if grid[loc...] == '[' #then also consider obstructions on the right cell
+        push!(test_sq, loc.+(0,1))
+    else grid[loc...] == ']' #then also consider obstructions on the left cell
+        push!(test_sq, loc.+(0,-1))
+    end 
+    test_sq
+end
 
+function try_m2(loc, dir, grid)
     #horizontal pushes are unchanged for wide things 
     dir[2] == 0 && return try_m(loc, dir, grid)
-    
-    #handle non-wide robot here - no "extra" 
 
-    #push is vertical, object is wide
-    if grid[loc] == '[' #then also consider obstructions on the right cell
-        extra = loc.+(0,1)
-    else #grid[loc] == ']' #then also consider obstructions on the left cell
-        extra = loc.+(0,-1)
+    test_sq = test_sqs(loc, grid)
+
+    cand_sq = map(x->x.+dir, test_sq)
+    if try_m2_wide(cand_sq, dir, grid)
+        move_wide_m2(test_sq, dir, grid)
+        return true 
     end 
+    false 
+end
 
-    (cand, cand_e) = (loc .+ dir, extra .+ dir)
-
-    grid[cand...] == '#' || grid[cand_e...] == '#' && return false #can't move into a wall 
-    (grid[cand...] == '.' && grid[cand_e...] == '.') && begin #neither side is blocked [this is wrong because we don't know we actually move until all other potential
-                                                              # children have tested, see below]
-        grid[cand...] = grid[loc...]
-        grid[loc...] = '.'
-        return true
-    end 
-
-    #at least one of the two sides is pushing something - but we need to propagate this "sideways" properly [separate "space to move" and "move"]
-    # because *all* of the children need to report they *can* move before we can move any of them
-    # we need a "try_m2" and a "move_m2". 
-    if try_m(cand, dir, grid)
-        grid[cand...] = grid[loc...]
-        grid[loc...] = '.'
-        return true
-    else 
-        return false 
-    end
+function try_m2_wide(cand_sq, dir, grid)
+    any(map(x->grid[x...]=='#', cand_sq)) && return false #can't move into a wall 
+    all(map(x->grid[x...]=='.', cand_sq)) && return true #neither side blocked
+    return all(map(sq->try_m2(sq, dir, grid), cand_sq))
 end 
 
+#call with a vector of moving items
+function move_wide_m2(locs, dir, grid)
+    foreach(locs) do sq
+        dest = sq.+dir
+        grid[dest...] != '.' && move_m2(dest, dir, grid)
+        grid[dest...] = grid[sq...]
+        grid[sq...] = '.'
+    end
+end
 
-solve(start2, grid2, moves)
+function solve2(start, grid, moves)
+    robot = start
+    for m ∈ moves
+        print("candidate cell $(robot.+m), ($(grid[(robot.+m)...]))\n")
+        robot = try_m2(robot, m, grid) ? robot.+m : robot 
+        print("New state\n")
+        for l ∈ eachrow(grid)
+            print("$l\n")
+        end
+        print("\n\n")
+    end
+end
 
-boxes = Tuple.(findall(==('[]'), grid2))
+
+solve2(start, grid2, moves)
+
+boxes = Tuple.(findall(==('['), grid2))
 pt2 = mapreduce(x->100*(x[1]-1)+(x[2]-1), + , boxes)
 
 print("Final grid: \n")
 for l ∈ eachrow(grid2)
     print("$l\n")
 end
+
 print("Pt2: $pt2\n")
