@@ -7,6 +7,35 @@
 #this of course includes the start node (which is an lr node (the Reindeer starts facing E), paired with a ud node
 #                   and the end nodes (both lr and ud versions are valid end states)
 
+
+
+#h will be the Metropolis distance between s and g, +1000 for the one 90° turn it would need
+h(loc,g) = sum( (loc.-g)...) + 1000
+
+
+possibles = Set([(0,1), (1,0), (0,-1), (-1,0) ]);
+
+function accessible(c)
+    
+    p = setdiff(possibles, notaccessible)
+    filter(p) do pp 
+        checkbounds(Bool, matrix, c.c+pp) #not needed if we're in a boxed grid - notaccessible here will just id a boundary or something 
+    end     
+end
+
+
+#this reconstructs *a* path (if there are multiple, it reconstructs the one we found first)
+function reconstruct_path(prev, cursor)
+    totalpath = [cursor]
+    while cursor in keys(prev)
+        cursor = prev[cursor]
+        pushfirst!(totalpath, cursor)
+    end
+    totalpath
+end
+
+
+
 #A✴ algorithm from a 2023 puzzle so I don't need to sort it out properly again
 function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
 
