@@ -6,22 +6,35 @@
 
 #this of course includes the start node (which is an lr node (the Reindeer starts facing E), paired with a ud node
 #                   and the end nodes (both lr and ud versions are valid end states)
+using DataStructures
 
 
+map_ = readlines("input")
+grid = map(!=('#'), reduce(vcat, permutedims.(collect.(map_))))
+s = size(grid)
+
+#the s and e are on opposite corners 
+g_loc = (2,s[2]-1)
+s_loc = (s[1]-1,2)
+#s_e = Set(g_loc, s_loc)
+
+print("Target = $g_loc\n")
+
+struct Node 
+    cell::Tuple{Int64,Int64}
+    dir::Tuple{Int64,Int64}
+end
 
 #h will be the Metropolis distance between s and g, +1000 for the one 90° turn it would need
-h(loc,g) = sum( (loc.-g)...) + 1000
-
-
-possibles = Set([(0,1), (1,0), (0,-1), (-1,0) ]);
-
-function accessible(c)
-    
-    p = setdiff(possibles, notaccessible)
-    filter(p) do pp 
-        checkbounds(Bool, matrix, c.c+pp) #not needed if we're in a boxed grid - notaccessible here will just id a boundary or something 
-    end     
+h(loc,g) = begin
+    diff = abs.(loc.cell .- g.cell)
+    sum(diff)
+    #all(diff.!=0) ? 1000 : 0 #for the turn needed at some point to do x and y movement 
+    #and then account for orientation relative to direction... 
+    #sum((loc.cell.-g.cell)) + 1000 +  ( (loc.dir == (-1,0) || loc.dir == (0,1) ) ? 0 : 1000) #the extra turn needed if we're facing west or s
 end
+                 #  E     S
+possibles = Set([(0,1), (1,0), (0,-1), (-1,0) ]);
 
 
 #this reconstructs *a* path (if there are multiple, it reconstructs the one we found first)
@@ -41,52 +54,59 @@ deltas = Dict([ (0,1)=>[( (0,1), 1), ((-1,0),1001), ((1,0), 1001) ],
                 (-1,0)=>[( (-1,0), 1), ((0,-1),1001), ((0,1), 1001) ],
 ])
 
-free(cell, s, grid) = grid[(cell.+s)...] == "."
+free(cell, s, grid) = grid[(cell.+s)...] #just store booleans! 
 
-function measure_recursive_path(s_node,s_dir, grid)
-    cost = 0
-    (cell, dir) = (s_node[1].+s_dir, s_dir)
-    possibles = filter(c->free(c,cell,grid), deltas[dir])
-    while length(possibles) == 1 #still going along a line
-        cost += possibles[1][2]
-        dir = possibles[1][1]
-        cell = cell .+ dir
-    end 
-    #if we get here, we're at a node (which is terminal, if len=0)
-    node = (cell, dir[1]==0) #second component is orientation
-    orthonode = (cell, dir[1]!=0) #the orthogonal node pair
-    #check if node or orthonode already exists as a termination condition for a branch of this recursion
-    #(avoiding loops)
-    #else add_nodes(node, orthonode)
-    add_edges(s_node, node, cost) #adds bidirectional edge here from start
-    add_edges(node, orthonode, 1000)
-    if dir ∈ possibles 
-        measure_recursive_path(node, dir, grid)
+
+#I actually don't think I need to do this recursively, given that A✴ only ever cares about the next set of accessible nodes 
+#this should actually be what *accessible* call gives - the list of nodes (and costs) accessible from s_node 
+function accessible(s_node, grid, s_e)
+    nodes = Vector{Tuple{Node, Int64}}()
+    #turning left or right
+    lr = deltas[s_node.dir]
+    push!(nodes, ( Node(s_node.cell, lr[2][1]), 1000) ) #left turn 
+    push!(nodes, ( Node(s_node.cell, lr[3][1]), 1000) ) #right turn 
+
+    #straight ahead:  - check we don't bump into something immediately (in which case this isn't possible)
+    if free(s_node.cell, s_node.dir, grid)
+        cost = 1 #cost to leave first cell 
+        (cell, dir) = (s_node.cell.+s_node.dir, s_node.dir)
+        possibles = filter(c->free(c[1],cell,grid), deltas[dir])
+        while length(possibles) == 1 && cell ∉ s_e #still going along a line, didn't hit our S or E cells
+            cost += possibles[1][2]
+            dir = possibles[1][1]
+            cell = cell .+ dir
+            possibles = filter(c->free(c[1],cell,grid), deltas[dir])
+            #ell[2] > 10 && exit()
+        end 
+        #if we get here, we're at a node
+        ahead_node = Node(cell, dir) #second component is orientation
+        push!(nodes, (ahead_node, cost))        
     end
-    for dir1 ∈ filter(!=(dir), possibles)
-        measure_recursive_path(orthonode, dir1, grid)
-    end
+    nodes     
 end
 
-#A✴ algorithm from a 2023 puzzle so I don't need to sort it out properly again
-function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
+s = Node(s_loc, (0,1))
+g = Node(g_loc, (0,0)) #we actually don't care about the dir for g
 
-    prev = Dict{cell_data, cell_data}() #dictionary of previous points
-    s_cell = cell_data(s, 1, 1); #count 1 == 0 really (thanks Julia!)
+#A✴ algorithm from a 2023 puzzle so I don't need to sort it out properly again
+function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't care about orientation when you arrive
+
+    #prev = Dict{Node, Node}() #dictionary of previous points
 
     #state space is [dir, amount] for each [location] - I really want to do this with a sparse DefaultDict or something but those seem slow
-    goalscore = [ [typemax(1) for i in 1:4, j in 1:4] for k in 1:bounds[1], l in 1:bounds[2] ]  #cost s -> cell
-    goalscore[s][1,1] = 0 #zero cost to not move at all!
+    #in this case, the state space is much smaller, since it only contains nodes - this needs to be a map
+    goalscore = Dict{Node, Int64}()  #cost s -> cell
+    goalscore[s] = 0 #zero cost to not move at all!
 
 
 
     #not having this around seems to make it slow (even though we only use it to look up score, which is already stored in the PQ)
-    fscore = [ [typemax(1) for i in 1:4, j in 1:4] for k in 1:bounds[1], l in 1:bounds[2] ] 
-    fscore[s][1,1] = h(s_cell) #and our best guess for s is just h at the moment 
+    fscore = Dict{Node, Int64}() 
+    fscore[s] = h(s,g) #and our best guess for s is just h at the moment 
 
+    s_e = Set([s.cell, g.cell])
 
-
-    openset = PriorityQueue{cell_data, Int}(s_cell => fscore[s][1,1] ) #
+    openset = PriorityQueue{Node, Int64}(s => fscore[s] ) #
 
     #Make
     cc = 0;
@@ -95,24 +115,23 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
             cursor = dequeue!(openset) #the highest priority (lowest "value") node
             cc += 1;
 
-            score = fscore[cursor.c][cursor.dir, cursor.count]; 
-            cursor.c == g #=we got there!=# && begin
-                                                pth = reconstruct_path(prev, cursor);
+            score = fscore[cursor]; 
+            cursor.cell == g.cell #=we got there!=# && begin
+                                                #pth = reconstruct_path(prev, cursor);
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                             end 
         
-            #evaluate neighbours of cursor = which means we need to store the direction we entered cursor from and how long we'd been moving in that direction
-            for i in accessible(cursor)
-                di = dir_to_num[i]
-                cand = cell_data(cursor.c+i, di, cursor.dir == di ? cursor.count+1 : 1)
-                trialgoalscore = goalscore[cursor.c][cursor.dir, cursor.count] + matrix[cand.c];
-                if trialgoalscore < goalscore[cand.c][di, cand.count]
-                    prev[cand] = cursor 
-                    goalscore[cand.c][di,cand.count] = trialgoalscore
+            #evaluate neighbours of cursor = which means we need to store the direction we entered cursor
+            for (cand,cost) ∈ accessible(cursor, grid, s_e)
                 
-                    fscore[cand.c][di,cand.count] = trialgoalscore + h(cand)
+                trialgoalscore = get(goalscore,cursor,typemax(1)) + cost;
+                if trialgoalscore < get(goalscore,cand,typemax(1))
+                    #prev[cand] = cursor 
+                    goalscore[cand] = trialgoalscore
+                
+                    fscore[cand] = trialgoalscore + h(cand, g)
  
-                    openset[cand] = fscore[cand.c][di,cand.count]
+                    openset[cand] = fscore[cand]
                 
                 end
             end
@@ -120,3 +139,5 @@ function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
     #end
     return typemax(1)
 end
+
+print("$(A✴(s,g, grid))\n")
