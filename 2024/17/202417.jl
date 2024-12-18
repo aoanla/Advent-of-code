@@ -69,7 +69,8 @@ decoder2 = Dict([0=>adv, 1=>bxl, 2=>bst, 3=>null, 4=>bxc, 5=>out2, 6=>bdv, 7=>cd
 
 function decode2(instructions)
     value = 0
-    idx = length(instructions) #final index
+    maxidx = length(instructions)
+    idx = maxidx #final index
     mini = 1 #to start with, as we can't have a non-zero terminal value
     flag = false 
     while idx > 0
@@ -90,6 +91,10 @@ function decode2(instructions)
             while mini == 8 #reverse course until we have a value we haven't exhausted options for 
                 value >>= 3
                 idx += 1
+                if idx > maxidx #detect if we can't ever solve now
+                    print("No possible solutions found at length $maxidx tritets, bailing out\n")
+                    exit()
+                end  
                 mini = value & 7 + 1
             end
             print("\ttrying: min i=$mini at $idx \n")
