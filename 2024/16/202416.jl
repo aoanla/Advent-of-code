@@ -81,7 +81,7 @@ function accessible(s_node, grid, s_e)
             possibles = filter(c->free(c[1],cell,grid), deltas[dir])
             #ell[2] > 10 && exit()
         end 
-        #if we get here, we're at a node
+        #if we get here, we're at a node - we *can* eliminate the node if length(possibles) == 0 *AND* cell ∉ s_e 
         ahead_node = Node(cell, dir) #second component is orientation
         push!(nodes, (ahead_node, cost))        
     end
