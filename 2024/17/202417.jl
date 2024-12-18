@@ -33,21 +33,21 @@ cdv(op, reg) = global reg[3] = reg[1] >> combo(op, reg)
 
 decoder = Dict([0=>adv, 1=>bxl, 2=>bst, 3=>jnz, 4=>bxc, 5=>out, 6=>bdv, 7=>cdv])
 
-function op(opcode, operand, reg)
+function op(opcode, operand, reg, decoder)
     decoder[opcode](operand, reg)
     reg[4]+=2
 end
 
 
-function runtape(instructions, register)
+function runtape(instructions, register, decoder)
     lastindex = length(instructions)
     while register[4] < lastindex
-        op(instructions[register[4]], instructions[register[4]+1], register)
+        op(instructions[register[4]], instructions[register[4]+1], register, decoder)
     end 
-    print("\n")
 end
 
-runtape(instructions, register)
+runtape(instructions, register, decoder)
+print("\n")
 
 #testoutput should be: 4,6,3,5,6,3,5,2,1,0
 
@@ -62,6 +62,11 @@ runtape(instructions, register)
 # and then repeatedly unpick 
 # we do need to backtrack if we find ourselves out of options though... 
 
+null(_, _) = nothing 
+out2(op, reg) = reg[5] = combo(op, reg) & 7
+decoder2 = Dict([0=>adv, 1=>bxl, 2=>bst, 3=>null, 4=>bxc, 5=>out2, 6=>bdv, 7=>cdv])
+
+
 function decode2(instructions)
     value = 0
     idx = length(instructions) #final index
@@ -73,7 +78,10 @@ function decode2(instructions)
         i = mini  
         #min i = last one we tried+1 (we which can get from value)
         while i < 8   #
-            nibble == i ⊻ ( (value + i) >> (i⊻4)) & 7  && break  #a general solution would parse the specifics of the instruction code to get this test
+            reg = [value+i, 0, 0, 1, 0]
+            runtape(instructions, reg, decoder2)
+            nibble == reg[5] && break 
+            #nibble == i ⊻ ( (value + i) >> (i⊻4)) & 7  && break  #a general solution would parse the specifics of the instruction code to get this test
             i += 1 
         end 
         if i == 8 
@@ -101,4 +109,5 @@ value = decode2(instructions)
 print("Result: $value (high nibble = $(value >> 45)\n")
 #test 
 print("Test:")
-runtape(instructions, [value, 0, 0, 1])
+runtape(instructions, [value, 0, 0, 1], decoder)
+print("\n")
