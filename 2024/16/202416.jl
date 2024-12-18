@@ -35,6 +35,38 @@ function reconstruct_path(prev, cursor)
 end
 
 
+deltas = Dict([ (0,1)=>[( (0,1), 1), ((-1,0),1001), ((1,0), 1001) ], 
+                (0,-1)=>[( (0,-1), 1), ((-1,0),1001), ((1,0), 1001) ],
+                (1,0)=>[( (1,0), 1), ((0,-1),1001), ((0,1), 1001) ],
+                (-1,0)=>[( (-1,0), 1), ((0,-1),1001), ((0,1), 1001) ],
+])
+
+free(cell, s, grid) = grid[(cell.+s)...] == "."
+
+function measure_recursive_path(s_node,s_dir, grid)
+    cost = 0
+    (cell, dir) = (s_node[1].+s_dir, s_dir)
+    possibles = filter(c->free(c,cell,grid), deltas[dir])
+    while length(possibles) == 1 #still going along a line
+        cost += possibles[1][2]
+        dir = possibles[1][1]
+        cell = cell .+ dir
+    end 
+    #if we get here, we're at a node (which is terminal, if len=0)
+    node = (cell, dir[1]==0) #second component is orientation
+    orthonode = (cell, dir[1]!=0) #the orthogonal node pair
+    #check if node or orthonode already exists as a termination condition for a branch of this recursion
+    #(avoiding loops)
+    #else add_nodes(node, orthonode)
+    add_edges(s_node, node, cost) #adds bidirectional edge here from start
+    add_edges(node, orthonode, 1000)
+    if dir ∈ possibles 
+        measure_recursive_path(node, dir, grid)
+    end
+    for dir1 ∈ filter(!=(dir), possibles)
+        measure_recursive_path(orthonode, dir1, grid)
+    end
+end
 
 #A✴ algorithm from a 2023 puzzle so I don't need to sort it out properly again
 function A✴(s::CartesianIndex{2}, g::CartesianIndex{2})
