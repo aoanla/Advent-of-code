@@ -60,21 +60,45 @@ runtape(instructions, register)
 #okay so this loop (and all loops like it) establishes a recurrence relation between sets of triple bits in A 
 # we can resolve this starting from the far end (because the recurrence is between the current and *higher* bits, and there are no higher bits for the far end)
 # and then repeatedly unpick 
+# we do need to backtrack if we find ourselves out of options though... 
 
-function decode(instructions) 
+function decode2(instructions)
     value = 0
-    for nibble ∈ reverse(instructions)
-
-        tmp = ( nibble ⊻ (value >> B) ) & 7 #the issue here is knowing the value of B here so we do need to actually run the code backwards
+    idx = length(instructions) #final index
+    mini = 1 #to start with, as we can't have a non-zero terminal value
+    flag = false 
+    while idx > 0
         value <<= 3
-        value += tmp
+        nibble = instructions[idx]
+        i = mini  
+        #min i = last one we tried+1 (we which can get from value)
+        while i < 8   #
+            nibble == i ⊻ ( (value + i) >> (i⊻4)) & 7  && break  #a general solution would parse the specifics of the instruction code to get this test
+            i += 1 
+        end 
+        if i == 8 
+            print("failed to find solution for position $idx, backtracking\n")
+            mini = 8
+            while mini == 8 #reverse course until we have a value we haven't exhausted options for 
+                value >>= 3
+                idx += 1
+                mini = value & 7 + 1
+            end
+            print("\ttrying: min i=$mini at $idx \n")
+            value >>= 3 #this one undoes the shift at the start
+            continue 
+        end  #at this point we need to backtrack and try a higher i        
+        print("Success at $idx with value $i\n")
+        value += i
+        idx -= 1
+        mini = 0
     end
     value
-end 
+end
 
-value = decode(instructions)
+value = decode2(instructions)
 
-print("Result: $value\n")
+print("Result: $value (high nibble = $(value >> 45)\n")
 #test 
 print("Test:")
 runtape(instructions, [value, 0, 0, 1])
