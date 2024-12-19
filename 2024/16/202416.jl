@@ -127,12 +127,17 @@ function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't 
                 
                 trialgoalscore = get(goalscore,cursor,typemax(1)) + cost;
                 if trialgoalscore <= get(goalscore,cand,typemax(1))
-                    prev[cand] = get(prev, cand, Set{Tuple{Node,Cost}}()) ∪ (cursor,cost)  #a cell can have several previous candidates, and we do need to store the costs
-                    goalscore[cand] = trialgoalscore
+                    if trialgoalscore == goalscore[cand] #this is another matching candidate for "best", not the first best candidate, so just merge set
+                        prev[cand] = prev[cand] ∪ [(cursor,cost)]  #a cell can have several previous candidates, and we do need to store the costs
+                    else #this is better, so we just replace the old set and update our records
+                        prev[cand] = Set([(cursor,cost)])
+                    
+                        goalscore[cand] = trialgoalscore
                 
-                    fscore[cand] = trialgoalscore + h(cand, g)
+                        fscore[cand] = trialgoalscore + h(cand, g)
  
-                    openset[cand] = fscore[cand]
+                        openset[cand] = fscore[cand]
+                    end
                 
                 end
             end
