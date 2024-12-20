@@ -84,11 +84,16 @@ function get_cheats_2(dists, min_len, max_dist)
     for (k,v) ∈ pairs(dists)
         coord = Tuple(k)
         v.count == -1 && continue #skip the points not on a path
-        for i ∈ 0:max_dist  #metropolis means this is a diamond shape of accessible positions, of which we're checking the lower-right quadrant
-            for j ∈ 0:(max_dist-i)
-                dest = coord.+(i,j)
+        for j ∈ 1:max_dist #ahead on same line
+            dest = coord.+(j,0)
+            (!checkbounds(Bool, dists, dest...) || dists[dest...].count == -1) && continue #if this is on the path
+            counter +=  (abs(v.count - dists[dest...].count)- (j)) >= min_len #abusing true values
+        end
+        for i ∈ 1:max_dist  #metropolis means this is a diamond shape of accessible positions, of which we're checking the lower-right quadrant
+            for j ∈ -(max_dist-i):(max_dist-i) #diamond below
+                dest = coord.+(j,i)
                 (!checkbounds(Bool, dists, dest...) || dists[dest...].count == -1) && continue #if this is on the path
-                counter +=  (abs(v.count - dists[dest...].count)- (i+j)) >= min_len #abusing true values
+                counter +=  abs(v.count - dists[dest...].count) - (abs(j)+i)  >= min_len #abusing true values
                 #print("Saving at: $v to $dest (saving: $(v.count) to $(dists[dest...].count) is $((abs(v.count - dists[dest...].count)- (i+j))))\n")                 
             end 
         end
