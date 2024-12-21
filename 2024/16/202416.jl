@@ -9,7 +9,7 @@
 using DataStructures
 
 
-map_ = readlines("input")
+map_ = readlines("inputtest")
 grid = map(!=('#'), reduce(vcat, permutedims.(collect.(map_))))
 s = size(grid)
 
@@ -40,14 +40,49 @@ possibles = Set([(0,1), (1,0), (0,-1), (-1,0) ]);
 #this reconstructs *a* path (if there are multiple, it reconstructs the one we found first)
 #luckily, our E has only one possible approach [from the West], so we don't need to worry about reconstructing multiple cursors 
 #we do need to worry about what we're storing - the original version of this stored breadcrumbs of cells, whilst here we need to store path_segments themselves
-function reconstruct_path(prev, cursor)
-    totalpath = Set([cursor]) #this isn't true now as when we start, we don't have a *segment* just a starting point 
-    while cursor ∈ keys(prev)
-        cursor_set = prev[cursor]
 
-        pushfirst!(totalpath, cursor)
-    end
-    totalpath
+###############
+#.......#....E#
+#.#.###.#.###.#
+#.....#.#...#.#
+#.###.#####.#.#
+#.#.#.......#.#
+#.#.#####.###.#
+#..89A......#.#
+###7#9#####.#.#
+#234#8....#.#.#
+#1#5#7###.#.#.#
+#23X56#...#.#.#  <-- double counting occurs here, when (10,4) in direction (-1,0) samples as an origin heading toward (12,4),(-1,0). 
+#1###.#.#.#.#.#         we've sampled (12,4) before as (12,4),(0,1) but we don't notice it again as (12,4),(-1,0) and so count it as an origin again for +1
+#S..#.....#...#     this isn't a problem for the other test sample as it doesn't have this "triple branch" effect where we get multiple rejoins of paths 
+###############
+
+#so we expect our answer to be "high" by a few cells until we can remove the extras.
+#I'd really rather not have to just use an enumerated set of all cells in the paths for this, and do something "clever" instead
+
+function reconstruct_path(prev, cursor::T, visited=Set{T}()) where T
+    #totalpath =  #this isn't true now as when we start, we don't have a *segment* just a starting point
+    visited_ =  visited ∪ [cursor]
+    tot = 0
+    if cursor ∈ keys(prev)
+        cursor_set = prev[cursor]
+        print("at $cursor, with prev nodes $cursor_set\n")
+        # now get number of cells with modulo 1000
+        for cursor_ ∈ cursor_set
+            tot += (last(cursor_) % 1000)  
+            if first(cursor_) ∉ visited_ #if we haven't been through this node with a previous path
+                res = reconstruct_path(prev, first(cursor_), visited_)
+                print("from $cursor_ to goal: $(first(res))\n")
+                tot += first(res)
+                visited_ = visited_ ∪ last(res) 
+            end 
+        end
+        #(tot, visited_)
+    end  
+    (tot, visited_)
+    
+        #pushfirst!(totalpath, cursor
+    #totalpath
 end
 
 
@@ -94,7 +129,7 @@ g = Node(g_loc, (0,0)) #we actually don't care about the dir for g
 #A✴ algorithm from a 2023 puzzle so I don't need to sort it out properly again
 function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't care about orientation when you arrive
 
-    prev = Dict{Node, Set{Tuple{Node,Cost}}}() #dictionary of previous points, as sets
+    prev = Dict{Node, Set{Tuple{Node,Int64}}}() #dictionary of previous points, as sets
 
     #state space is dir for each location, as part of Node
     #in this case, the state space is much smaller, since it only contains nodes - this needs to be a map
@@ -118,7 +153,8 @@ function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't 
 
             score = fscore[cursor]; 
             cursor.cell == g.cell #=we got there!=# && begin
-                                                #pth = reconstruct_path(prev, cursor);
+                                                pth = reconstruct_path(prev, cursor);
+                                                print("PATH: $pth\n")
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                             end 
         
@@ -126,8 +162,9 @@ function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't 
             for (cand,cost) ∈ accessible(cursor, grid, s_e)
                 
                 trialgoalscore = get(goalscore,cursor,typemax(1)) + cost;
-                if trialgoalscore <= get(goalscore,cand,typemax(1))
-                    if trialgoalscore == goalscore[cand] #this is another matching candidate for "best", not the first best candidate, so just merge set
+                prev_cand_score = get(goalscore,cand,typemax(1))
+                if trialgoalscore <= prev_cand_score
+                    if trialgoalscore == prev_cand_score #this is another matching candidate for "best", not the first best candidate, so just merge set
                         prev[cand] = prev[cand] ∪ [(cursor,cost)]  #a cell can have several previous candidates, and we do need to store the costs
                     else #this is better, so we just replace the old set and update our records
                         prev[cand] = Set([(cursor,cost)])
