@@ -9,7 +9,7 @@
 using DataStructures
 
 
-map_ = readlines("inputtest")
+map_ = readlines("input")
 grid = map(!=('#'), reduce(vcat, permutedims.(collect.(map_))))
 s = size(grid)
 
@@ -77,12 +77,9 @@ function reconstruct_path(prev, cursor::T, visited=Set{T}()) where T
                 visited_ = visited_ ∪ last(res) 
             end 
         end
-        #(tot, visited_)
     end  
     (tot, visited_)
-    
-        #pushfirst!(totalpath, cursor
-    #totalpath
+
 end
 
 
