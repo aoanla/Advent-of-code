@@ -11,8 +11,9 @@
 row(n) = (n-1)÷3 #[bottom to top]
 col(n) = (n-1)%3 #[l to r]
 
-
+### got the test wrong for 0 as a destination (wrong true/false ordering)
 function numpad_(src, dest)
+    src == dest && return ""
     if (src > 0) & (dest > 0)
         rowdiff =  row(dest) - row(src) 
         coldiff =  col(dest) - col(src)
@@ -36,15 +37,15 @@ function numpad_(src, dest)
         if col(dest) == 1 #same row as us
             "^" ^ (row(dest)+1)
         elseif col(dest) == 0 #one left 
-            "<" * "^" ^ (row(dest)+1)
+             "^" ^ (row(dest)+1) * "<"  #constraint to avoid the gap
         else #1 right 
-            ">" * "^" ^ (row(dest)+1) #minimising transitions, and putting up with l being last to avoid the transitions
+            ">" * "^" ^ (row(dest)+1) 
         end
     elseif dest == -1 #A
-        #must be 1-9 by now by elimination 
+        #must be 1-9 by now by elimination   #I think this is possibly not optimal as r is better than d as a final move (and r->d transition is cheap)
         ">" ^ (2-col(src)) * "v" ^ (row(src)+1)
-    else #dest == 0 by elimination
-        ( col(src) == 0 ? "<" : ( col(src) == 2 ? ">" : "" ) ) * "v" ^ (row(src)+1)
+    else #dest == 0 by elimination           #similarly here, I think r *last* might be better than r first because repeated vv adds As 
+        ( col(src) == 2 ? "<" : ( col(src) == 0 ? ">" : "" ) ) * "v" ^ (row(src)+1)
     end
 end 
 
@@ -57,6 +58,8 @@ for src ∈ -1:9, dest ∈ -1:9
     numpad[src+2,dest+2] = numpad_(src,dest) * "A"
 end
 
+print("transition: 40 $(numpad_(4,0))\n")
+
 #keypad transitions
 #SRC DEST SEQ
 keypad = Dict([
@@ -67,7 +70,7 @@ keypad = Dict([
 "AA"=>"A"
 "^A"=>">A"
 "^v"=>"vA"
-"^>"=>"v>A"
+"^>"=>"v>A"  
 "^<"=>"v<A"  #not the most efficient, as we need to avoid The Gap
 "<v"=>">A"
 "<>"=>">>A"
@@ -201,4 +204,10 @@ for i ∈ readlines("input")
     global count += val 
 end 
 
-print("Total Pt2: $count\n") 
+print("Total Pt2: $count\n") #
+#consider triplet sequences - we're never going to generate longer sequences without an A 
+# (except from the numpad at the start - maybe there's some additional optimisation there)
+# is it possible that we generate some sequences that are of different resulting length for the *next* robot (even with our careful curation)?
+
+#resolution - we had < and > mixed up in the "0 as a destination" code [I should have just written everything out longhand because then I wouldn't make logic errors]
+# moral of the story - my brain is better at doing a simple "logical ordering" problem than it is at writing too much code to do the same thing.
