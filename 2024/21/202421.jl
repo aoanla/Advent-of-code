@@ -72,7 +72,7 @@ keypad = Dict([
 "<v"=>">A"
 "<>"=>">>A"
 "<^"=>">^A"  #this actually is the most efficient, despite the Gap, as we end on a ^
-"<A"=>"^>>A" #is this the most efficient, considering higher order routing? - > the "official" order might endup being ">^>" given the below
+"<A"=>">>^A" #is this the most efficient, considering higher order routing? - > the "official" order might endup being ">^>" given the below
 "v<"=>"<A"
 "v>"=>">A"
 "v^"=>"^A"
@@ -84,7 +84,7 @@ keypad = Dict([
 "A^"=>"<A"
 "A>"=>"vA"
 "Av"=>"<vA" #left is worse to end on
-"A<"=>"<<vA" #left is worse, but repetition is better than no reps - the "official" mapping is not "v<<" but "<v<", ridiculously
+"A<"=>"v<<A" #left is worse, but repetition is better than no reps - the "official" mapping is not "v<<" but "<v<", ridiculously
 ])
 
 mapping(chr) = chr == 'A' ? Int8(-1) : parse(Int8, chr) 
