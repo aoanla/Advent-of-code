@@ -155,3 +155,7 @@ print("Total Pt2: $count\n")
 
 #so, patterns grow (as we expected) very quickly - 2 iterations gets us to ~70, 3 to ~170, 5 to ~1000
 # this is a "extrapolate the fixed points etc of the repeated function application" problem for pt2
+
+#there's actually only a limited number of pairs that exist in our output (we listed them in our kpad mapper)
+# - since we don't need the actual sequence, just the length, can we just turn these is to "pairs transition maps" and just
+# count the number of each pairs that exist each iteration?
