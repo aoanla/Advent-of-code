@@ -108,9 +108,9 @@ end
 
 function kpad_kpad(seq)
     l = length(seq)
-    internal = "A" * seq
+    internal = seq
     out = "" 
-    for i ∈ 1:l
+    for i ∈ 1:l-1
         out = out * keypad[internal[i:i+1]]
     end 
     out 
@@ -129,8 +129,8 @@ end
 count = 0
 for i ∈ readlines("input")
     line = parse_str(i)
-    num = parse(Int64, i[1:end-1])
-    final = foldl((x,i)->kpad_kpad(x), 1:2; init=npad_kpad(line))
+    num = parse(Int128, i[1:end-1])
+    final = foldl((x,i)->kpad_kpad('A'*x), 1:2; init=npad_kpad(line)) #need a leading A for each seq as it is encoded 
     l = length(final)
     val = l*num
     print("$l * $(num) = $val\n")
@@ -140,18 +140,18 @@ end
 print("Total Pt1: $count\n")
 
 #naive pt2 for exploration of behaviour (should be 1:25 but this of course too slow for practical exploration)
-count = 0
-for i ∈ readlines("input")
-    line = parse_str(i)
-    num = parse(Int64, i[1:end-1])
-    final = foldl((x,i)->kpad_kpad(x), 1:5; init=npad_kpad(line))
-    l = length(final)
-    val = l*num
-    print("$l * $(num) = $val\n")
-    global count += val 
-end 
+#count = 0
+#for i ∈ readlines("input")
+#    line = parse_str(i)
+#    num = parse(Int64, i[1:end-1])
+#    final = foldl((x,i)->kpad_kpad('A'*x), 1:5; init=npad_kpad(line)) #need a leading A for each seq as it is encoded...
+#    l = length(final)
+#    val = l*num
+#    print("$l * $(num) = $val\n")
+#    global count += val 
+#end 
 
-print("Total Pt2: $count\n")
+#print("Total Pt2: $count\n")
 
 #so, patterns grow (as we expected) very quickly - 2 iterations gets us to ~70, 3 to ~170, 5 to ~1000
 # this is a "extrapolate the fixed points etc of the repeated function application" problem for pt2
@@ -159,3 +159,46 @@ print("Total Pt2: $count\n")
 #there's actually only a limited number of pairs that exist in our output (we listed them in our kpad mapper)
 # - since we don't need the actual sequence, just the length, can we just turn these is to "pairs transition maps" and just
 # count the number of each pairs that exist each iteration?
+
+# no - because we wouldn't know the edges
+# however - *all* our subsequences are bounded by As on the right, so we can always subdivide a given sequence by As [and track those sequences internally]
+# we might just have to track the "leftmost" subsequence specially as it doesn't have an A to the left <-- this is false as we always need to add an A each 
+# time for the starting position...
+
+
+
+function kpad_pop_kpad(population)
+    newpop = Dict{String,Int128}()
+    for (k,v) ∈ pairs(population)
+        newk = kpad_kpad('A'*k*'A') #adds the leading A automatically inside kpad_kpad
+        for kk ∈ split(newk[1:end-1], 'A') #remove the terminal A to avoid a false empty set 
+            newpop[kk] = get(newpop,kk,0) + v
+        end 
+    end
+    newpop
+end
+
+function kpad_to_pop(keys)
+    newpop = Dict{String,Int128}()
+    subseqs = split(keys[1:end-1], 'A') #remove the terminal A to avoid a false empty set 
+    for i ∈ subseqs[1:end] #the first subsequence also starts with an 
+        newpop[i] = get(newpop, i, 0) + 1
+    end 
+    newpop
+end 
+
+#tested against pt1 soln for n = 2,3,4,5 and works - "too low" for pt2 apparently (and hard to verify of course)
+count = Int128(0)
+for i ∈ readlines("input")
+    line = parse_str(i)
+    num = parse(Int128, i[1:end-1])
+    final = foldl((x,i)->kpad_pop_kpad(x), 1:25; init=kpad_to_pop(npad_kpad(line))) #need a leading A for each seq as it is encoded 
+    l = mapreduce(+, pairs(final)) do (k,v)
+        v * (length(k)+1) #+1 for the A that terminates it 
+    end
+    val = l*num
+    print("$l * $(num) = $val\n")
+    global count += val 
+end 
+
+print("Total Pt2: $count\n") 
