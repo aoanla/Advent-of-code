@@ -24,33 +24,42 @@ print("pt1: $pt1\n")
 # not sure if this is actually helpful, but it does mean we can expect low entropy and a lot of repeating patterns in our sequences once processed 
 
 encode(x) = foldl((n,i)->(n<<6)+i, x; init=0)
-seq_totals = fill(0, 9586981) #the sequences, encoded a little lossily as 4 x 5bit values
-
-for seed ∈ parse.(Int64, readlines("input"))
-    #repeat buffer, true if we've not met this sequence before for this seed 
+function pt2()
+    seq_totals = fill(0, 9586981) #the sequences, encoded a little lossily as 4 x 5bit values
     buffer = fill(true,9586981)
-    oldn = seed
-    seq = Vector{Int64}() #would be faster to use a ringbuffer of size 4 (index (n+i)%4 +1 where i is our loop number and n is the index we want)
-    for i ∈ 1:3 #fill first seq value - nothing until we have this many diffs
-        n = xorshift(oldn)
-        x = (n % 10) - (oldn % 10) 
-        push!(seq, x+18)
-        oldn = n
-    end
-    for i ∈ 4:2000
-        n = xorshift(oldn)
-        x = (n % 10) - (oldn % 10) 
-        seq = push!(seq, x+18)
-        index = encode(seq) + 1
-        if buffer[index] 
-            global seq_totals[index] += (n%10) #add the increment for this seed for this sequence
-            buffer[index] = false
-            #I think, technically, the low-bits are going to repeat if we see a pattern again, so we could terminate here.
+    for seed ∈ parse.(Int64, readlines("input"))
+        #repeat buffer, true if we've not met this sequence before for this seed 
+        fill!(buffer, true)
+        oldn = seed
+        oldn10 = seed % 10 
+        seq = fill(0,4) #Vector{Int64}() #would be faster to use a ringbuffer of size 4 (index (n+i)%4 +1 where i is our loop number and n is the index we want)
+        for i ∈ 1:3 #fill first seq value - nothing until we have this many diffs
+            n = xorshift(oldn)
+            n10 = n %10 
+            x = n10 - oldn10 
+            seq[i] = x+18
+            #push!(seq, x+18)
+            oldn = n
+            oldn10 = n10
         end
-        oldn = n
-        popfirst!(seq)
+        for i ∈ 4:2000
+            n = xorshift(oldn)
+            n10 = n % 10 
+            x = n10 - oldn10 
+            seq[(i+3)%4+1] = x+18
+
+            index = encode([seq[(i+n)%4+1] for n ∈ 0:3]) + 1
+            if buffer[index] 
+                seq_totals[index] += n10 #add the increment for this seed for this sequence
+                buffer[index] = false
+            end
+            oldn = n
+            oldn10 = n10
+        end
     end
+    seq_totals
 end
 
+seq_totals = pt2()
 #sort!(seq_totals)
 print("$(maximum(seq_totals))\n")
