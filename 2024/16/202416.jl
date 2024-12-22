@@ -41,33 +41,17 @@ possibles = Set([(0,1), (1,0), (0,-1), (-1,0) ]);
 #luckily, our E has only one possible approach [from the West], so we don't need to worry about reconstructing multiple cursors 
 #we do need to worry about what we're storing - the original version of this stored breadcrumbs of cells, whilst here we need to store path_segments themselves
 
-###############
-#.......#....E#
-#.#.###.#.###.#
-#.....#.#...#.#
-#.###.#####.#.#
-#.#.#.......#.#
-#.#.#####.###.#
-#..89A......#.#
-###7#9#####.#.#
-#234#8....#.#.#
-#1#5#7###.#.#.#
-#23X56#...#.#.#  <-- double counting occurs here, when (10,4) in direction (-1,0) samples as an origin heading toward (12,4),(-1,0). 
-#1###.#.#.#.#.#         we've sampled (12,4) before as (12,4),(0,1) but we don't notice it again as (12,4),(-1,0) and so count it as an origin again for +1
-#S..#.....#...#     this isn't a problem for the other test sample as it doesn't have this "triple branch" effect where we get multiple rejoins of paths 
-###############
 
-#so we expect our answer to be "high" by a few cells until we can remove the extras.
-#I'd really rather not have to just use an enumerated set of all cells in the paths for this, and do something "clever" instead
 
 function reconstruct_path(prev, cursor::T, visited=Set{T}()) where T
-    #totalpath =  #this isn't true now as when we start, we don't have a *segment* just a starting point
+    tot = length(visited) == 0 ? 1 : 0 #initialise tot to 1 [for the start cell, which we never count] if this is the "head" function
     visited_ =  visited ∪ [cursor]
-    tot = 0
     if cursor ∈ keys(prev)
         cursor_set = prev[cursor]
         print("at $cursor, with prev nodes $cursor_set\n")
         # now get number of cells with modulo 1000
+        #if there's multiple cursors in the set, they'll double(tripleetc0) count the terminal cell, so subtract off extra here
+        tot -= length(cursor_set) - 1 
         for cursor_ ∈ cursor_set
             tot += (last(cursor_) % 1000)  
             if first(cursor_) ∉ visited_ #if we haven't been through this node with a previous path
@@ -151,7 +135,7 @@ function A✴(s::Node, g::Node, grid)  #more than one end point, since we don't 
             score = fscore[cursor]; 
             cursor.cell == g.cell #=we got there!=# && begin
                                                 pth = reconstruct_path(prev, cursor);
-                                                print("PATH: $pth\n")
+                                                print("Pt2: $(first(pth))\n")
                                                 return score # the total cost! (I think fscore[cursor] == goalscore[cursor] at this point?)
                                             end 
         
