@@ -1,4 +1,4 @@
-#using DataStructures   #for SortedDict
+using DataStructures   #for SortedDict
 
 # just from looking at pt1, pt2 is clearly going to be a defragmentation task.
 # as such, pt1 has a trivial way to do it based on representing the map as an "unpacked"
@@ -21,25 +21,29 @@ end
 zero_ = UInt8('0')
 
 #parse input 
-file_spans = Dict{Int32,f_span}()
-empty_spans = Dict{Int32,Int32}()
+file_spans_ = Dict{Int32,f_span}()
+empty_spans_ = Dict{Int32,Int32}()
 #Pt2 - this is probably a dequeue for the empty spans (we need to pop and push from the front)
 # a deque for each length of empty_span (0-9)
-empty_span_queues = [ DeQueue() for i ∈ 1-9 ]
+empty_span_queues = [ Deque{Int32}() for i ∈ 1:9 ] #each length of empty_span is a list of start positions
 
 max_empty_len = 0 #fast check
 read("input") |> Base.Fix1(map, x->x-zero_) |> Base.Fix2(Base.Iterators.partition,2) |>  enumerate |> Base.Fix1((op,iter)->foldl(op,iter; init=0), (n,(i,f))->begin
     file_spans_[n]=f_span(i-1,first(f))
     if length(f) == 2
         empty_spans_[n+first(f)] = last(f)
-        pushlast!(empty_spans_queues[last(f)], n+first(f))  
-        if max_empty_len < last(f) 
-            max_empty_len = last(f)
-        end
+        last(f) != 0 && push!(empty_span_queues[last(f)], n+first(f))  #push! == pushlast
+        #if max_empty_len < last(f) 
+        #    max_empty_len = last(f)
+        #end
     end
     n + sum(f) #next position
 end)
 #now we have span vectors, which should probably be priority queues
+
+for i ∈ 1:9
+    push!(empty_span_queues[i], typemax(Int32)) #Deques must be non-empty, so lets give them a "default" position that's at the limit of distance
+end
 
 #print("$file_spans\n")
 #print("$empty_spans\n")
@@ -68,16 +72,8 @@ for start_empty ∈ empty_spans_keys
 
             delete!(file_spans,start_fs) #remove file_span
             
-            #STUFF FOR PT2
-            #check for merge not 
-            #nxt = last_thing_we_mvd
-            #if start + file_spans[nxt].len == new_start_fs && file_spans[nxt].id == fs.id
-                #merge
-            #end 
             file_spans[new_start_fs] = fs #and move to new location
-            #check for span merger (if fs.type == previous_fs.type then replace with 1)
-            #update index of spans here (priority queue?)
-            #/STUFF FOR PT2
+
             len -= fs.len
             len == 0 && break 
         else #chop fs span in two
@@ -85,21 +81,11 @@ for start_empty ∈ empty_spans_keys
             empty_spans[start_fs+rem_f_span.len] = len #make our new empty space 
             file_spans[start_empty] = f_span(fs.id, len) #fill empty span
             file_spans[start_fs] = rem_f_span #this is what's left
-            #STUFF FOR PT2
-            #check for span merger (if fs.type == previous_fs.type then replace with 1)
-            #STUFF FOR PT2
-
-            #update span index with new fs_span location and new_fs_span in general
             break #no more need to iterate file spans
         end
         
     end
     delete!(empty_spans,tmp)
-    #STUFF FOR PT2
-    #check for span merger between the final fs we moved and the *next* fs [which must be adjacent to us now]
-    #nxt = last_fs_start + last_fs_len
-    #has_key(file_spans, nxt) && file_spans[nxt].id = last_fs_id && #merge right 
-    #/STUFF FOR PT2
 end
 
 #keys(file_spans) |> collect |> sort! |> Base.Fix1(foreach, x->print("P$x - id: $(file_spans[x].id) len: $(file_spans[x].len)\n"))
@@ -107,15 +93,13 @@ end
     #total value is file_span_id * (sum of all positions in span)
     # sum_of_all_positions from start to start+len is (2*start + len - 1)*len / 2 [Gaussian sum]
 #    tot += 
-checksum(file_span_dict) = mapreduce(+, keys(file_span_dict) ) do start
-    span = file_spans_dict[start]
-    #print("Sum: starting at $(start) to $(start+span.len-1), mul by $(span.id)... ")
+checksum(file_spans) = mapreduce(+, keys(file_spans) ) do start
+    span = file_spans[start]
     span.id*((2*start + span.len - 1)*span.len)÷2
-    #print("$res \n")
-    #res
+
 end
 
-print("Pt1: $checksum(file_spans)\n")
+print("Pt1: $(checksum(file_spans))\n")
 
 ##okay, so I overestimated the complexity of pt2 from looking at pt1
 # this is just iterating over my reverse_order_file_spans list, finding the 
@@ -131,19 +115,29 @@ print("Pt1: $checksum(file_spans)\n")
 for fs_posn ∈ keys(file_spans_) |> collect |> (x-> sort!(x; rev=true)) 
     fs = file_spans_[fs_posn]
     #each span gets tried against the stuff available when it is checked.
-    fs.len > max_empty_len && continue #early exit if we never had a gap large enough
-    (empty_posn,empty_len) = findmin(peekfirst.(empty_span_queues[fs.len:end]))
-    best_empty_idx == -1  && continue #or however we indicate no valid thing found 
+    #fs.len > max_empty_len && continue #early exit if we never had a gap large enough
+    
+    (empty_posn,empty_len) = findmin(first.(empty_span_queues[fs.len:end])) #find the earliest span that is long enough
+    empty_len += fs.len - 1 #correct for offset in sample 
+    empty_posn > fs_posn && continue #the earliest useful span is past this file, so we can't use it 
     popfirst!(empty_span_queues[empty_len]) #removes it for us
 
     file_spans_[empty_posn] = fs
     delete!(file_spans_, fs_posn)
-    
 
-    if best_empty_idx > fs.len #push back remaining elem
-        insert_into(empty_span_queues[best_empty_idx-fs.len], empty_posn+fs.len)
+    if empty_len > fs.len #push back remaining elem, maintaining sort order
+        buffer = Stack{Int64}()
+        posn =  empty_posn+fs.len
+        len = empty_len - fs.len
+        while first(empty_span_queues[len]) < posn
+            push!(buffer, popfirst!(empty_span_queues[len]))
+        end
+        pushfirst!(empty_span_queues[len], posn)
+        for item ∈ buffer
+            pushfirst!(empty_span_queues[len], item)
+        end
     end
 
 end
 
-print("Pt2: $checksum(file_spans_)\n")
+print("Pt2: $(checksum(file_spans_))\n")
