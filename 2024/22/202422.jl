@@ -45,6 +45,7 @@ for seed ∈ parse.(Int64, readlines("input"))
         if buffer[index] 
             global seq_totals[index] += (n%10) #add the increment for this seed for this sequence
             buffer[index] = false
+            #I think, technically, the low-bits are going to repeat if we see a pattern again, so we could terminate here.
         end
         oldn = n
         popfirst!(seq)
