@@ -30,7 +30,7 @@ for seed ∈ parse.(Int64, readlines("input"))
     #repeat buffer, true if we've not met this sequence before for this seed 
     buffer = fill(true,9586981)
     oldn = seed
-    seq = Vector{Int64}()
+    seq = Vector{Int64}() #would be faster to use a ringbuffer of size 4 (index (n+i)%4 +1 where i is our loop number and n is the index we want)
     for i ∈ 1:3 #fill first seq value - nothing until we have this many diffs
         n = xorshift(oldn)
         x = (n % 10) - (oldn % 10) 
@@ -52,5 +52,5 @@ for seed ∈ parse.(Int64, readlines("input"))
     end
 end
 
-sort!(seq_totals)
-print("$(last(seq_totals))\n")
+#sort!(seq_totals)
+print("$(maximum(seq_totals))\n")
