@@ -45,6 +45,8 @@ print("Pt1: $(length(ttriples))   = total nodes - $(length(nodes_)) \n")
 #technically, there's some complex algorithms for finding the specifically *maximum* maximal clique quickly, but this graph isn't huge so we 
 # can probably afford to use Bron-Kerbosch and take max length clique
 
+#(notice that this is just an extension of our algorithm above for pt1)
+
 function BronKerbosch(R, P, X, edges)
     length(P) == 0 && length(X) == 0 && return(Set([R]))
     P = deepcopy(P)
