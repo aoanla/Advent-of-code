@@ -71,3 +71,19 @@ print("Pt1: $output\n")
 #(so x0,y0 will be missing the c0 operations, and z45 should just get the c44 input, probably as oN or mN -> z45 )
 
 #further nodes - zN for N < 45 must have a XOR operation, so if we see any other op, we know that's an incorrect wire
+
+x = ["x"*string(i; pad = 2) for i ∈ 0:44 ]
+y = ["y"*string(i; pad = 2) for i ∈ 0:44 ]
+n = [nothing for i ∈ 0:44 ]
+m = [nothing for i ∈ 0:44 ]
+o = [nothing for i ∈ 0:44 ]
+z = ["z"*string(i; pad = 2) for i ∈ 0:45 ]
+c = [nothing for i ∈ 0:45 ]
+
+swaps = Dict{String, String}()
+
+#run through the adder from bit 0 to bit 44...
+
+
+
+#of course we're probably supposed to do the more general version of this (move from low to high bits, checking values to identify the points of errors)
