@@ -69,3 +69,5 @@ print("Pt1: $output\n")
 # oN or mN -> c(N+1)  [the carry bit for operation on bit 1]
 
 #(so x0,y0 will be missing the c0 operations, and z45 should just get the c44 input, probably as oN or mN -> z45 )
+
+#further nodes - zN for N < 45 must have a XOR operation, so if we see any other op, we know that's an incorrect wire
