@@ -65,7 +65,7 @@ print("Pt1: $output\n")
 # xN xor yN -> nN 
 # xN and yN -> mN
 # nN xor cN -> zN
-# mN and cN -> oN
+# nN and cN -> oN
 # oN or mN -> c(N+1)  [the carry bit for operation on bit 1]
 
 #(so x0,y0 will be missing the c0 operations, and z46 should just get the c44 input, probably as oN or mN -> z46 )
