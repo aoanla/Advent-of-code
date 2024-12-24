@@ -60,3 +60,12 @@ print("Pt1: $output\n")
 #   this is a 45 bit adder, so can produce a 46 bit output with carry.
 # a multi-bit adder is a hierarchical template built from 1-bit \w carry adders so can we just iterate through x00->44 and y00->44 and trace what should happen?
 
+# a full adder looks like
+
+# xN xor yN -> nN 
+# xN and yN -> mN
+# nN xor cN -> zN
+# mN and cN -> oN
+# oN or mN -> c(N+1)  [the carry bit for operation on bit 1]
+
+#(so x0,y0 will be missing the c0 operations, and z46 should just get the c44 input, probably as oN or mN -> z46 )
