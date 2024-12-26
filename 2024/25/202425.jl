@@ -10,5 +10,5 @@ end
 (k, l) = parse_input("input")
 
 #print("keys = $k \n locks = $l \n")
-res = mapreduce(x->fits(x),  +  , Iterators.product(k,l))
+res = mapreduce(fits,  +  , Iterators.product(k,l))
 print("res: $res\n")
