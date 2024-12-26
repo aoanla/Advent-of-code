@@ -94,17 +94,12 @@ end
 
 (c, c_e, e_l) = parse_grid(grid)
 
-
-print("$(collect(c_e[1]))\n\n")
-
-
-
 price(i,c,c_e,e_l) = length(c[i]) * mapreduce(e->length(e_l[e]),+,collect(c_e[i]))
 
 
 prices = map(x->price(x,c,c_e,e_l), first(axes(c)))
 
-print("$prices -\n\t pt1 sum is $(sum(prices))\n")
+print("\t pt1 sum is $(sum(prices))\n")
 
 price2(i,c,c_e) = length(c[i]) * length(c_e[i])
 
