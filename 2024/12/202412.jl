@@ -99,13 +99,15 @@ print("$(collect(c_e[1]))\n\n")
 
 
 
-price(i,c,c_e,e_l) = begin
-    #print("$i -> $(c_e[i])\n")
-    #print("\tcluster $i is $(c[i])\n\n")
-    #print("\tedge cells are $(mapreduce(e->e_l[e],∪,collect(c_e[i])))\n")
-    length(c[i]) * mapreduce(e->length(e_l[e]),+,collect(c_e[i]))
-end
+price(i,c,c_e,e_l) = length(c[i]) * mapreduce(e->length(e_l[e]),+,collect(c_e[i]))
+
 
 prices = map(x->price(x,c,c_e,e_l), first(axes(c)))
 
-print("$prices -\n\t sum is $(sum(prices))\n")
+print("$prices -\n\t pt1 sum is $(sum(prices))\n")
+
+price2(i,c,c_e) = length(c[i]) * length(c_e[i])
+
+prices2 = map(x->price2(x,c,c_e), first(axes(c)))
+
+print("\t pt2 sum is $(sum(prices2))\n")
