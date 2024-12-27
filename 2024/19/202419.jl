@@ -11,4 +11,12 @@
 
 #is equality testing more efficient (if we map the sequences to octal values, we can just do numeric comparison)
 
-Dict{Int64,Set{String}}
+
+#I think this is a good place to experiment with Memoization.jl because I've never used it before
+using Memoization
+
+t = Dict{Int64,Set{String}}()
+
+@memoize function match_string()
+end 
+
