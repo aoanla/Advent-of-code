@@ -17,6 +17,48 @@ using Memoization
 
 t = Dict{Int64,Set{String}}()
 
-@memoize function match_string()
+
+
+function parse_input(input)
+    towels = Vector{Regex}()
+    targets = Vector{String}()
+    t = true 
+    for i ∈ readlines(input)
+        if t
+            towels = split(i, ", ") |> Base.Fix1(map, ii->Regex("^$ii(.*)"))
+            t = false 
+            continue
+        end
+        length(i) == 0 && continue 
+        push!(targets, i)
+    end
+    (towels, targets)
+end
+
+#trivial version just to see if it works before we try the hard stuff above... (where we'll need to categorise by sequence length etc)
+@memoize function match_string(str, towels)
+    length(str) == 0 && return true
+    for i ∈ towels
+        m = match(i,str)
+        !isnothing(m) && match_string(m[1], towels) && return true 
+    end
+    false 
 end 
+
+#...okay, I don't need any of the clever stuff above to make this tractable apparently, so we can just do the obvious loop for this one:
+@memoize function combi_string(str, towels)
+    length(str) == 0 && return 1
+    counter = 0
+    for i ∈ towels
+        m = match(i,str)
+        counter += isnothing(m) ? 0 : combi_string(m[1], towels)  #this could be represented just as a sum now because we can't early exit
+    end
+    counter 
+end 
+
+
+(towels, targets) = parse_input("input")
+
+print("Pt1: $(mapreduce(t->match_string(t, towels), +, targets))\n")
+print("Pt2: $(mapreduce(t->combi_string(t, towels), +, targets))\n")
 
